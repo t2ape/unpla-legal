@@ -23,8 +23,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       # npm ci → astro build → dist を Pages 用 artifact としてアップロードまで行う。
+      # Astro 7 は Node >=22.12.0 必須（action 既定の Node 20 ではビルドが失敗する）。
       - name: Build Astro site
         uses: withastro/action@v3
+        with:
+          node-version: 22
 
   deploy:
     needs: build
