@@ -1,0 +1,17 @@
+{
+  "name": "unpla-legal",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UnplaQuest の法務ドキュメント（利用規約・プライバシーポリシー）公開サイト",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "astro": "^7.0.1",
+    "zod": "^4.4.3"
+  }
+}

@@ -1,0 +1,23 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { getCollection, render } from 'astro:content';
+import LegalLayout from '../../layouts/LegalLayout.astro';
+
+// 各版を固定 URL（/terms/v1 等）で生成する。一度公開したら URL を変えない。
+export const getStaticPaths = (async () => {
+  const entries = (await getCollection('terms')).sort(
+    (a, b) => b.data.version - a.data.version,
+  );
+  return entries.map((entry) => ({
+    params: { version: entry.id },
+    props: { entry, entries },
+  }));
+}) satisfies GetStaticPaths;
+
+const { entry, entries } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<LegalLayout kind="terms" entry={entry} entries={entries} isPast={true}>
+  <Content />
+</LegalLayout>

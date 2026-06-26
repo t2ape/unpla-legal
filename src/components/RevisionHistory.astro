@@ -1,0 +1,62 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { formatDate } from '../utils';
+
+type Kind = 'terms' | 'privacy';
+
+interface Props {
+  kind: Kind;
+  // 全版（version 降順で渡す）。
+  entries: (CollectionEntry<'terms'> | CollectionEntry<'privacy'>)[];
+}
+
+const { kind, entries } = Astro.props;
+---
+
+<section class="revision-history" aria-labelledby="revision-history-heading">
+  <h2 id="revision-history-heading">改定履歴</h2>
+  <ul>
+    {
+      entries.map((entry) => (
+        <li>
+          <a href={`/${kind}/v${entry.data.version}`}>第{entry.data.version}版</a>
+          <span class="effective">効力発生日：{formatDate(entry.data.effectiveDate)}</span>
+          {entry.data.status === 'current' && <span class="badge">最新版</span>}
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+<style>
+  .revision-history {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+  }
+  .revision-history h2 {
+    font-size: 1.1rem;
+  }
+  .revision-history ul {
+    list-style: none;
+    padding: 0;
+  }
+  .revision-history li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+  }
+  .effective {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+</style>

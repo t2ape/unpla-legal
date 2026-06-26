@@ -1,0 +1,168 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import RevisionHistory from '../components/RevisionHistory.astro';
+import { formatDate, KIND_LABEL } from '../utils';
+
+type Kind = 'terms' | 'privacy';
+
+interface Props {
+  kind: Kind;
+  // 表示中の版。
+  entry: CollectionEntry<'terms'> | CollectionEntry<'privacy'>;
+  // 全版（version 降順）。改定履歴に使う。
+  entries: (CollectionEntry<'terms'> | CollectionEntry<'privacy'>)[];
+  // 過去版の固定 URL（/terms/v1 等）として表示しているか。
+  isPast: boolean;
+}
+
+const { kind, entry, entries, isPast } = Astro.props;
+const { title, version, effectiveDate } = entry.data;
+const label = KIND_LABEL[kind];
+const pageTitle = isPast ? `${title}（第${version}版）` : title;
+const canonical = isPast ? `/${kind}/v${version}` : `/${kind}`;
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle} | UnplaQuest</title>
+    <link rel="canonical" href={new URL(canonical, Astro.site)} />
+    <meta name="robots" content="index, follow" />
+  </head>
+  <body>
+    <main>
+      <nav class="breadcrumb">
+        <a href="/">UnplaQuest 法務情報</a>
+        <span aria-hidden="true">/</span>
+        <span>{label}</span>
+      </nav>
+
+      <header class="doc-header">
+        <h1>{title}</h1>
+        <p class="meta">
+          {isPast ? `第${version}版` : `最新版（第${version}版）`}
+          ・効力発生日：{formatDate(effectiveDate)}
+        </p>
+      </header>
+
+      {
+        isPast && (
+          <aside class="past-notice" role="note">
+            これは過去版（第{version}版）です。
+            <a href={`/${kind}`}>最新版はこちら</a>。
+          </aside>
+        )
+      }
+
+      <article class="doc-body">
+        <slot />
+      </article>
+
+      <RevisionHistory kind={kind} entries={entries} />
+
+      <footer class="site-footer">
+        <a href="/">← 法務情報トップ</a>
+      </footer>
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a1a;
+    --text-muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #2563eb;
+    --accent-soft: #eff6ff;
+    --max-width: 46rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115;
+      --text: #e8e8ea;
+      --text-muted: #9aa0a6;
+      --border: #2a2d34;
+      --accent: #6ea8fe;
+      --accent-soft: #1a2233;
+    }
+  }
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    color-scheme: light dark;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP',
+      'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.85;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+  main {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+  a {
+    color: var(--accent);
+    text-underline-offset: 2px;
+  }
+  .breadcrumb {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .doc-header h1 {
+    font-size: 1.8rem;
+    margin: 0 0 0.5rem;
+  }
+  .doc-header .meta {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+  .past-notice {
+    margin: 1.5rem 0;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    font-size: 0.9rem;
+  }
+  .doc-body {
+    margin-top: 2.5rem;
+  }
+  .doc-body h2 {
+    font-size: 1.25rem;
+    margin-top: 2.5rem;
+    padding-top: 0.5rem;
+  }
+  .doc-body h3 {
+    font-size: 1.05rem;
+    margin-top: 1.75rem;
+  }
+  .doc-body ol,
+  .doc-body ul {
+    padding-left: 1.5rem;
+  }
+  .doc-body li {
+    margin: 0.35rem 0;
+  }
+  .doc-body a {
+    word-break: break-all;
+  }
+  .site-footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.9rem;
+  }
+</style>
