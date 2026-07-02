@@ -13,6 +13,7 @@ UnplaQuest の法務ドキュメント（利用規約・プライバシーポリ
 | `/` | リンクハブ |
 | `/terms` | 利用規約・**常に最新版**（アプリ／App Store に載せる安定 URL） |
 | `/privacy` | プライバシーポリシー・**常に最新版** |
+| `/support` | サポートページ（App Store Connect の**サポート URL** に登録する安定 URL） |
 | `/terms/v1`, `/privacy/v1` | 各**過去版の固定 URL**（一度公開したら変えない） |
 
 `/terms`・`/privacy` は版が変わっても URL 不変で常に最新（`status: current`）を返す。

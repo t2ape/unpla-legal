@@ -1,0 +1,7 @@
+{
+  // このワークスペースを開いたときに推奨される拡張機能。
+  "recommendations": [
+    // Astro 公式拡張（.astro のシンタックス・補完・診断）。
+    "astro-build.astro-vscode"
+  ]
+}
