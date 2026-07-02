@@ -1,0 +1,21 @@
+{
+  // 「実行とデバッグ」から dev サーバーを起動しつつブラウザで開く。
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // dev タスクを起動してから、既定ブラウザで localhost:4321 を開く。
+      "name": "dev サーバーを開く",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "serverReadyAction": {
+        "pattern": "localhost:([0-9]+)",
+        "uriFormat": "http://localhost:%s/",
+        "action": "openExternally"
+      },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+---
+// サポートページ（App Store Connect の「サポート URL」に登録する安定 URL）。
+// 問い合わせフォームは設けず、連絡先メールと基本的な案内のみを掲載する静的ページ。
+const supportEmail = 'support@unpla.app';
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>サポート | UnplaQuest</title>
+    <link rel="canonical" href={new URL('/support', Astro.site)} />
+    <meta name="robots" content="index, follow" />
+  </head>
+  <body>
+    <main>
+      <nav class="breadcrumb">
+        <a href="/">UnplaQuest 法務情報</a>
+        <span aria-hidden="true">/</span>
+        <span>サポート</span>
+      </nav>
+
+      <header class="page-header">
+        <h1>UnplaQuest サポート</h1>
+        <p class="lead">
+          アンプラクエスト（UnplaQuest）に関するお問い合わせ・不具合のご連絡はこちらから。
+        </p>
+      </header>
+
+      <section class="contact">
+        <h2>お問い合わせ先</h2>
+        <p>
+          ご質問、不具合の報告、ご要望などは、下記のメールアドレスまでお送りください。
+        </p>
+        <p class="contact-email">
+          <a href={`mailto:${supportEmail}`}>{supportEmail}</a>
+        </p>
+        <p class="note">
+          いただいたお問い合わせには順次対応いたします。返信までお時間をいただく場合があります。ご連絡の際は、ご利用の端末・iOS のバージョン、発生している状況をあわせてお知らせいただくとスムーズです。
+        </p>
+      </section>
+
+      <footer class="site-footer">
+        <p><a href="/">← 法務情報トップ</a></p>
+      </footer>
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a1a;
+    --text-muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #2563eb;
+    --accent-soft: #eff6ff;
+    --max-width: 46rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115;
+      --text: #e8e8ea;
+      --text-muted: #9aa0a6;
+      --border: #2a2d34;
+      --accent: #6ea8fe;
+      --accent-soft: #1a2233;
+    }
+  }
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    color-scheme: light dark;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP',
+      'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.85;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+  main {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+  a {
+    color: var(--accent);
+    text-underline-offset: 2px;
+  }
+  .breadcrumb {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .page-header h1 {
+    font-size: 1.8rem;
+    margin: 0 0 0.5rem;
+  }
+  .page-header .lead {
+    color: var(--text-muted);
+    margin: 0;
+  }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 2.5rem;
+  }
+  .contact {
+    margin-top: 2.5rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--accent-soft);
+  }
+  .contact h2 {
+    margin-top: 0;
+  }
+  .contact-email {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0.5rem 0;
+  }
+  .note {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 0;
+  }
+  .site-footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.9rem;
+  }
+</style>

@@ -1,0 +1,53 @@
+{
+  // ローカル確認用タスク。コマンドパレット →「Tasks: Run Task」から実行できる。
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // dev サーバー起動（http://localhost:4321）。ホットリロードあり。
+      "label": "dev",
+      "type": "npm",
+      "script": "dev",
+      "isBackground": true,
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": {
+        "owner": "astro",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*astro.*",
+          "endsPattern": ".*(localhost|ready).*"
+        }
+      }
+    },
+    {
+      // 本番ビルド（dist/ を生成）。デプロイ相当の出力を確認する。
+      "label": "build",
+      "type": "npm",
+      "script": "build",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      // ビルド結果をローカルサーバーで確認（build 後に実行）。
+      "label": "preview",
+      "type": "npm",
+      "script": "preview",
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      // 型チェック（astro check）。初回は @astrojs/check の導入を促されることがある。
+      "label": "check",
+      "type": "npm",
+      "script": "check",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    }
+  ]
+}

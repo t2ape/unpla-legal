@@ -1,0 +1,15 @@
+{
+  // .astro を Astro 拡張で扱う。
+  "files.associations": {
+    "*.astro": "astro"
+  },
+  // 生成物・依存はエクスプローラー／検索から除外して見通しをよくする。
+  "files.exclude": {
+    "dist/": true,
+    ".astro/": true,
+    "node_modules/": true
+  },
+  "search.exclude": {
+    "package-lock.json": true
+  }
+}
