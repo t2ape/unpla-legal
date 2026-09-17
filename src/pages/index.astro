@@ -1,19 +1,13 @@
 ---
-import { getCollection } from 'astro:content';
-import { formatDate } from '../utils';
+import { getCommerce, getVersions, pickCurrent } from '../lib/entries';
+import { COMMERCE_PATH, formatDate } from '../utils';
 
 // リンクハブ：各ドキュメントの最新版へ誘導する。
-async function latest(kind: 'terms' | 'privacy') {
-  const entries = (await getCollection(kind)).sort(
-    (a, b) => b.data.version - a.data.version,
-  );
-  return entries.find((e) => e.data.status === 'current') ?? entries[0];
-}
-
 const docs = [
-  { kind: 'terms' as const, entry: await latest('terms') },
-  { kind: 'privacy' as const, entry: await latest('privacy') },
+  { kind: 'terms' as const, entry: pickCurrent(await getVersions('terms')) },
+  { kind: 'privacy' as const, entry: pickCurrent(await getVersions('privacy')) },
 ];
+const commerce = await getCommerce();
 ---
 
 <!doctype html>
@@ -28,7 +22,9 @@ const docs = [
     <main>
       <header>
         <h1>UnplaQuest 法務情報</h1>
-        <p class="lead">利用規約とプライバシーポリシーの最新版・過去版を掲載しています。</p>
+        <p class="lead">
+          利用規約・プライバシーポリシーの最新版と過去版など、UnplaQuest の法務情報を掲載しています。
+        </p>
       </header>
 
       <ul class="doc-list">
@@ -44,6 +40,18 @@ const docs = [
               </a>
             </li>
           ))
+        }
+        {
+          commerce && (
+            <li>
+              <a class="card" href={COMMERCE_PATH}>
+                <span class="card-title">{commerce.data.title}</span>
+                <span class="card-meta">
+                  最終更新日：{formatDate(commerce.data.updatedDate)}
+                </span>
+              </a>
+            </li>
+          )
         }
         <li>
           <a class="card" href="/support">

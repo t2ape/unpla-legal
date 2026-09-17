@@ -1,13 +1,11 @@
 ---
-import type { CollectionEntry } from 'astro:content';
+import type { Kind, LegalEntry } from '../lib/entries';
 import { formatDate } from '../utils';
-
-type Kind = 'terms' | 'privacy';
 
 interface Props {
   kind: Kind;
-  // 全版（version 降順で渡す）。
-  entries: (CollectionEntry<'terms'> | CollectionEntry<'privacy'>)[];
+  // 公開対象の全版（version 降順で渡す）。
+  entries: LegalEntry[];
 }
 
 const { kind, entries } = Astro.props;
@@ -22,6 +20,7 @@ const { kind, entries } = Astro.props;
           <a href={`/${kind}/v${entry.data.version}`}>第{entry.data.version}版</a>
           <span class="effective">効力発生日：{formatDate(entry.data.effectiveDate)}</span>
           {entry.data.status === 'current' && <span class="badge">最新版</span>}
+          {entry.data.status === 'draft' && <span class="badge">下書き</span>}
         </li>
       ))
     }

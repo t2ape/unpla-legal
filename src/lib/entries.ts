@@ -1,0 +1,31 @@
+import { getCollection, type CollectionEntry } from 'astro:content';
+
+export type Kind = 'terms' | 'privacy';
+export type LegalEntry = CollectionEntry<'terms'> | CollectionEntry<'privacy'>;
+
+// 下書きは開発サーバでだけ見せる。本番ビルドでは URL ごと生成しない。
+export const SHOW_DRAFTS = import.meta.env.DEV;
+
+// 公開対象の版を version 降順で返す。
+export async function getVersions(kind: Kind): Promise<LegalEntry[]> {
+  const entries: LegalEntry[] = await getCollection(kind);
+  return entries
+    .filter((e) => SHOW_DRAFTS || e.data.status !== 'draft')
+    .sort((a, b) => b.data.version - a.data.version);
+}
+
+// /terms・/privacy が指す最新版。current が無ければ下書き以外で最も新しい版。
+export function pickCurrent(entries: LegalEntry[]): LegalEntry {
+  const current =
+    entries.find((e) => e.data.status === 'current') ??
+    entries.find((e) => e.data.status !== 'draft');
+  if (!current) throw new Error('公開できる版がありません');
+  return current;
+}
+
+// 特定商取引法に基づく表示。本番で下書きなら null（ページを生成しない）。
+export async function getCommerce(): Promise<CollectionEntry<'commerce'> | null> {
+  const [entry] = await getCollection('commerce');
+  if (!entry) return null;
+  return SHOW_DRAFTS || entry.data.status === 'published' ? entry : null;
+}

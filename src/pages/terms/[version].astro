@@ -1,13 +1,12 @@
 ---
 import type { GetStaticPaths } from 'astro';
-import { getCollection, render } from 'astro:content';
+import { render } from 'astro:content';
 import LegalLayout from '../../layouts/LegalLayout.astro';
+import { getVersions } from '../../lib/entries';
 
 // 各版を固定 URL（/terms/v1 等）で生成する。一度公開したら URL を変えない。
 export const getStaticPaths = (async () => {
-  const entries = (await getCollection('terms')).sort(
-    (a, b) => b.data.version - a.data.version,
-  );
+  const entries = await getVersions('terms');
   return entries.map((entry) => ({
     params: { version: entry.id },
     props: { entry, entries },
@@ -18,6 +17,6 @@ const { entry, entries } = Astro.props;
 const { Content } = await render(entry);
 ---
 
-<LegalLayout kind="terms" entry={entry} entries={entries} isPast={true}>
+<LegalLayout kind="terms" entry={entry} entries={entries} isAlias={false}>
   <Content />
 </LegalLayout>

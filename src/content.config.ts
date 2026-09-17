@@ -10,8 +10,9 @@ const legalSchema = z.object({
   version: z.number().int().positive(),
   // 効力発生日（制定/改定日）。
   effectiveDate: z.date(),
-  // current = 最新版（/terms・/privacy が指す） / past = 過去版。
-  status: z.enum(['current', 'past']),
+  // current = 最新版（/terms・/privacy が指す） / past = 過去版
+  // draft = 下書き（`npm run dev` でだけ /{doc}/v{version} に出る。本番ビルドには含めない）。
+  status: z.enum(['current', 'past', 'draft']),
 });
 
 const terms = defineCollection({
@@ -24,4 +25,16 @@ const privacy = defineCollection({
   schema: legalSchema,
 });
 
-export const collections = { terms, privacy };
+// 特定商取引法に基づく表示。同意を取る書類ではないので版を持たず、
+// 1 ファイル（index.md）を書き換えて最終更新日だけを残す。
+const commerce = defineCollection({
+  loader: glob({ pattern: 'index.md', base: './src/content/commerce' }),
+  schema: z.object({
+    title: z.string(),
+    updatedDate: z.date(),
+    // published = /tokushoho に出す / draft = `npm run dev` でだけ出す。
+    status: z.enum(['published', 'draft']),
+  }),
+});
+
+export const collections = { terms, privacy, commerce };

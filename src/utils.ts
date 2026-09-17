@@ -8,3 +8,6 @@ export const KIND_LABEL: Record<'terms' | 'privacy', string> = {
   terms: '利用規約',
   privacy: 'プライバシーポリシー',
 };
+
+// 特定商取引法に基づく表示の固定 URL。
+export const COMMERCE_PATH = '/tokushoho';
