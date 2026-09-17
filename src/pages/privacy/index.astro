@@ -6,9 +6,9 @@ import { getVersions, pickCurrent } from '../../lib/entries';
 // 常に最新版（status: current）を返すエイリアス。
 const entries = await getVersions('privacy');
 const current = pickCurrent(entries);
-const { Content } = await render(current);
+const { Content, headings } = await render(current);
 ---
 
-<LegalLayout kind="privacy" entry={current} entries={entries} isAlias={true}>
+<LegalLayout kind="privacy" entry={current} entries={entries} headings={headings} isAlias={true}>
   <Content />
 </LegalLayout>

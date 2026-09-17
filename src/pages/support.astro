@@ -8,65 +8,132 @@ import { COMMERCE_PATH } from '../utils';
 const supportEmail = 'support@unpla.app';
 // Apple は特商法の表示を「アプリ内かサポートサイト」に求めるので、ここから辿れるようにする。
 const commerce = await getCommerce();
+const links = [
+  { href: '/terms', label: '利用規約' },
+  { href: '/privacy', label: 'プライバシーポリシー' },
+  ...(commerce ? [{ href: COMMERCE_PATH, label: commerce.data.title }] : []),
+];
 ---
 
-<BaseLayout pageTitle="サポート" breadcrumb="サポート" path="/support">
-  <header class="doc-header">
-    <h1>UnplaQuest サポート</h1>
-    <p class="meta">
-      アンプラクエスト（UnplaQuest）に関するお問い合わせ・不具合のご連絡はこちらから。
-    </p>
-  </header>
+<BaseLayout pageTitle="サポート" path="/support">
+  <div class="container narrow">
+    <header class="page-hero">
+      <span class="eyebrow">Support</span>
+      <h1>サポート</h1>
+      <p class="lead">
+        アンプラクエスト（UnplaQuest）に関するご質問・不具合のご連絡は、メールで受け付けています。
+      </p>
+    </header>
 
-  <section class="contact">
-    <h2>お問い合わせ先</h2>
-    <p>ご質問、不具合の報告、ご要望などは、下記のメールアドレスまでお送りください。</p>
-    <p class="contact-email">
-      <a href={`mailto:${supportEmail}`}>{supportEmail}</a>
-    </p>
-    <p class="note">
-      いただいたお問い合わせには順次対応いたします。返信までお時間をいただく場合があります。ご連絡の際は、ご利用の端末・iOS のバージョン、発生している状況をあわせてお知らせいただくとスムーズです。
-    </p>
-  </section>
+    <section class="contact" aria-labelledby="contact-heading">
+      <h2 id="contact-heading">お問い合わせ先</h2>
+      <a class="mail-button" href={`mailto:${supportEmail}`}>
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="M4 6h16v12H4zM4 7l8 6 8-6"></path>
+        </svg>
+        {supportEmail}
+      </a>
+      <ul class="tips">
+        <li>いただいたお問い合わせには順次対応します。返信までお時間をいただく場合があります。</li>
+        <li>ご利用の端末・iOS のバージョンと、起きている状況をあわせてお知らせいただくとスムーズです。</li>
+      </ul>
+    </section>
 
-  <section class="links">
-    <h2>関連情報</h2>
-    <ul>
-      <li><a href="/terms">利用規約</a></li>
-      <li><a href="/privacy">プライバシーポリシー</a></li>
-      {commerce && <li><a href={COMMERCE_PATH}>{commerce.data.title}</a></li>}
-    </ul>
-  </section>
+    <section class="related" aria-labelledby="related-heading">
+      <h2 id="related-heading">関連情報</h2>
+      <ul>
+        {
+          links.map((link) => (
+            <li>
+              <a href={link.href}>
+                {link.label}
+                <span aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
 </BaseLayout>
 
 <style>
-  .contact {
-    margin-top: 2.5rem;
-    padding: 1.5rem;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--accent-soft);
+  .narrow {
+    max-width: 46rem;
   }
   h2 {
-    font-size: 1.25rem;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    margin: 0 0 1rem;
   }
-  .contact h2 {
-    margin-top: 0;
+  .contact {
+    padding: 1.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
   }
-  .contact-email {
-    font-size: 1.15rem;
+  .mail-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--surface);
     font-weight: 600;
-    margin: 0.5rem 0;
+    text-decoration: none;
+    word-break: break-all;
+    transition: background 0.15s ease;
   }
-  .note {
-    font-size: 0.9rem;
+  .mail-button:hover {
+    background: var(--accent-strong);
+    color: var(--surface);
+  }
+  .mail-button svg {
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .tips {
+    margin: 1.25rem 0 0;
+    padding-left: 1.2rem;
+    font-size: 0.875rem;
     color: var(--text-muted);
-    margin-bottom: 0;
   }
-  .links {
-    margin-top: 2.5rem;
+  .tips li + li {
+    margin-top: 0.35rem;
   }
-  .links ul {
-    padding-left: 1.5rem;
+  .related {
+    margin-top: 3rem;
+  }
+  .related ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .related li + li {
+    border-top: 1px solid var(--border);
+  }
+  .related a {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.85rem 1.15rem;
+    color: var(--text);
+    text-decoration: none;
+    transition: background 0.15s ease;
+  }
+  .related a:hover {
+    background: var(--surface-muted);
+  }
+  .related a span {
+    color: var(--text-faint);
   }
 </style>

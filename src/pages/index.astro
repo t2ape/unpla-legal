@@ -1,142 +1,184 @@
 ---
+import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCommerce, getVersions, pickCurrent } from '../lib/entries';
 import { COMMERCE_PATH, formatDate } from '../utils';
 
 // リンクハブ：各ドキュメントの最新版へ誘導する。
-const docs = [
-  { kind: 'terms' as const, entry: pickCurrent(await getVersions('terms')) },
-  { kind: 'privacy' as const, entry: pickCurrent(await getVersions('privacy')) },
-];
+const terms = pickCurrent(await getVersions('terms'));
+const privacy = pickCurrent(await getVersions('privacy'));
 const commerce = await getCommerce();
+
+const cards = [
+  {
+    href: '/terms',
+    eyebrow: 'Terms of Service',
+    title: terms.data.title,
+    meta: `第${terms.data.version}版・効力発生日 ${formatDate(terms.data.effectiveDate)}`,
+    icon: 'doc',
+  },
+  {
+    href: '/privacy',
+    eyebrow: 'Privacy Policy',
+    title: privacy.data.title,
+    meta: `第${privacy.data.version}版・効力発生日 ${formatDate(privacy.data.effectiveDate)}`,
+    icon: 'shield',
+  },
+  ...(commerce
+    ? [
+        {
+          href: COMMERCE_PATH,
+          eyebrow: 'Commercial Disclosure',
+          title: commerce.data.title,
+          meta: `最終更新日 ${formatDate(commerce.data.updatedDate)}`,
+          icon: 'receipt',
+        },
+      ]
+    : []),
+  {
+    href: '/support',
+    eyebrow: 'Support',
+    title: 'サポート',
+    meta: 'お問い合わせ・不具合のご連絡',
+    icon: 'mail',
+  },
+];
+
+// 線だけの簡素なアイコン（24px グリッド）。
+const ICONS: Record<string, string> = {
+  doc: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6',
+  shield: 'M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6zM9 12l2 2 4-4',
+  receipt: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3',
+  mail: 'M4 6h16v12H4zM4 7l8 6 8-6',
+};
 ---
 
-<!doctype html>
-<html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>UnplaQuest 法務情報</title>
-    <link rel="canonical" href={new URL('/', Astro.site)} />
-  </head>
-  <body>
-    <main>
-      <header>
-        <h1>UnplaQuest 法務情報</h1>
-        <p class="lead">
-          利用規約・プライバシーポリシーの最新版と過去版など、UnplaQuest の法務情報を掲載しています。
-        </p>
-      </header>
+<BaseLayout path="/">
+  <div class="container">
+    <header class="page-hero hub-hero">
+      <span class="eyebrow">Legal</span>
+      <h1>UnplaQuest 法務情報</h1>
+      <p class="lead">
+        アンプラクエスト（UnplaQuest）をご利用いただくうえでの約束ごとと、情報の取り扱いについてまとめています。
+      </p>
+    </header>
 
-      <ul class="doc-list">
-        {
-          docs.map(({ kind, entry }) => (
-            <li>
-              <a class="card" href={`/${kind}`}>
-                <span class="card-title">{entry.data.title}</span>
-                <span class="card-meta">
-                  最新：第{entry.data.version}版 ・ 効力発生日：
-                  {formatDate(entry.data.effectiveDate)}
-                </span>
-              </a>
-            </li>
-          ))
-        }
-        {
-          commerce && (
-            <li>
-              <a class="card" href={COMMERCE_PATH}>
-                <span class="card-title">{commerce.data.title}</span>
-                <span class="card-meta">
-                  最終更新日：{formatDate(commerce.data.updatedDate)}
-                </span>
-              </a>
-            </li>
-          )
-        }
-        <li>
-          <a class="card" href="/support">
-            <span class="card-title">サポート</span>
-            <span class="card-meta">お問い合わせ先</span>
-          </a>
-        </li>
-      </ul>
-    </main>
-  </body>
-</html>
+    <ul class="cards">
+      {
+        cards.map((card) => (
+          <li>
+            <a class="card" href={card.href}>
+              <span class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22">
+                  <path d={ICONS[card.icon]} />
+                </svg>
+              </span>
+              <span class="card-body">
+                <span class="card-eyebrow">{card.eyebrow}</span>
+                <span class="card-title">{card.title}</span>
+                <span class="card-meta">{card.meta}</span>
+              </span>
+              <span class="card-arrow" aria-hidden="true">→</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</BaseLayout>
 
-<style is:global>
-  :root {
-    --bg: #ffffff;
-    --text: #1a1a1a;
-    --text-muted: #6b7280;
-    --border: #e5e7eb;
-    --accent: #2563eb;
-    --card-hover: #f9fafb;
+<style>
+  .hub-hero {
+    padding-top: 4rem;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f1115;
-      --text: #e8e8ea;
-      --text-muted: #9aa0a6;
-      --border: #2a2d34;
-      --accent: #6ea8fe;
-      --card-hover: #171a20;
-    }
-  }
-  * {
-    box-sizing: border-box;
-  }
-  html {
-    color-scheme: light dark;
-  }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP',
-      'Helvetica Neue', Arial, sans-serif;
-    line-height: 1.7;
-  }
-  main {
-    max-width: 40rem;
-    margin: 0 auto;
-    padding: 4rem 1.25rem;
-  }
-  h1 {
-    font-size: 1.9rem;
-    margin: 0 0 0.5rem;
-  }
-  .lead {
-    color: var(--text-muted);
-    margin: 0 0 2.5rem;
-  }
-  .doc-list {
+  .cards {
     list-style: none;
-    padding: 0;
     margin: 0;
+    padding: 0;
     display: grid;
     gap: 1rem;
+    max-width: 42rem;
   }
   .card {
     display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    padding: 1.25rem 1.5rem;
+    align-items: flex-start;
+    gap: 1rem;
+    height: 100%;
+    padding: 1.35rem 1.4rem;
+    background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    text-decoration: none;
+    border-radius: var(--radius);
     color: var(--text);
-    transition: background 0.15s ease;
+    text-decoration: none;
+    box-shadow: var(--shadow);
+    transition:
+      transform 0.2s ease,
+      border-color 0.2s ease;
   }
   .card:hover {
-    background: var(--card-hover);
+    color: var(--text);
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+  }
+  .card-icon {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 12px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .card-icon svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+    min-width: 0;
+  }
+  .card-eyebrow {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
   }
   .card-title {
-    font-size: 1.15rem;
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.1rem;
+    line-height: 1.5;
   }
   .card-meta {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
+  }
+  .card-arrow {
+    align-self: center;
+    color: var(--text-faint);
+    transition:
+      transform 0.2s ease,
+      color 0.2s ease;
+  }
+  .card:hover .card-arrow {
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card,
+    .card-arrow {
+      transition: none;
+    }
+    .card:hover,
+    .card:hover .card-arrow {
+      transform: none;
+    }
   }
 </style>

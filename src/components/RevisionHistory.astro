@@ -6,56 +6,96 @@ interface Props {
   kind: Kind;
   // 公開対象の全版（version 降順で渡す）。
   entries: LegalEntry[];
+  // 表示中の版。
+  currentVersion: number;
 }
 
-const { kind, entries } = Astro.props;
+const { kind, entries, currentVersion } = Astro.props;
 ---
 
 <section class="revision-history" aria-labelledby="revision-history-heading">
   <h2 id="revision-history-heading">改定履歴</h2>
-  <ul>
+  <ol>
     {
-      entries.map((entry) => (
-        <li>
-          <a href={`/${kind}/v${entry.data.version}`}>第{entry.data.version}版</a>
-          <span class="effective">効力発生日：{formatDate(entry.data.effectiveDate)}</span>
-          {entry.data.status === 'current' && <span class="badge">最新版</span>}
-          {entry.data.status === 'draft' && <span class="badge">下書き</span>}
-        </li>
-      ))
+      entries.map((entry) => {
+        const { version, effectiveDate, status } = entry.data;
+        const isViewing = version === currentVersion;
+        return (
+          <li class:list={{ 'is-viewing': isViewing }}>
+            <a href={`/${kind}/v${version}`} aria-current={isViewing ? 'page' : undefined}>
+              <span class="version">第{version}版</span>
+              <span class="date">効力発生日 {formatDate(effectiveDate)}</span>
+              {status === 'current' && <span class="badge">最新版</span>}
+              {status === 'draft' && <span class="badge is-draft">下書き</span>}
+            </a>
+          </li>
+        );
+      })
     }
-  </ul>
+  </ol>
 </section>
 
 <style>
   .revision-history {
-    margin-top: 4rem;
-    padding-top: 2rem;
+    margin-top: 4.5rem;
+    max-width: 42rem;
+  }
+  h2 {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    margin: 0 0 1rem;
+  }
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  li + li {
     border-top: 1px solid var(--border);
   }
-  .revision-history h2 {
-    font-size: 1.1rem;
-  }
-  .revision-history ul {
-    list-style: none;
-    padding: 0;
-  }
-  .revision-history li {
+  a {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.75rem;
-    padding: 0.4rem 0;
+    align-items: center;
+    gap: 0.25rem 1rem;
+    padding: 0.85rem 1.15rem;
+    color: var(--text);
+    text-decoration: none;
+    transition: background 0.15s ease;
   }
-  .effective {
+  a:hover {
+    background: var(--surface-muted);
+    color: var(--text);
+  }
+  .is-viewing a {
+    background: var(--accent-soft);
+  }
+  .version {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .date {
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: 0.875rem;
   }
   .badge {
-    font-size: 0.75rem;
-    padding: 0.1rem 0.5rem;
+    margin-left: auto;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.05rem 0.6rem;
     border-radius: 999px;
-    background: var(--accent-soft);
     color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .is-viewing .badge {
+    background: var(--surface);
+  }
+  .badge.is-draft {
+    color: var(--warning-text);
+    background: var(--warning-soft);
   }
 </style>

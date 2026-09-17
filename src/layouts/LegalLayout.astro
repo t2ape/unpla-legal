@@ -1,8 +1,10 @@
 ---
+import type { MarkdownHeading } from 'astro';
 import BaseLayout from './BaseLayout.astro';
 import RevisionHistory from '../components/RevisionHistory.astro';
+import TableOfContents from '../components/TableOfContents.astro';
 import type { Kind, LegalEntry } from '../lib/entries';
-import { formatDate, KIND_LABEL } from '../utils';
+import { formatDate, KIND_EYEBROW } from '../utils';
 
 interface Props {
   kind: Kind;
@@ -10,45 +12,72 @@ interface Props {
   entry: LegalEntry;
   // 公開対象の全版（version 降順）。改定履歴に使う。
   entries: LegalEntry[];
+  // 本文の見出し。目次に使う。
+  headings: MarkdownHeading[];
   // 最新版エイリアス（/terms・/privacy）として表示しているか。
   isAlias: boolean;
 }
 
-const { kind, entry, entries, isAlias } = Astro.props;
+const { kind, entry, entries, headings, isAlias } = Astro.props;
 const { title, version, effectiveDate, status } = entry.data;
-const label = KIND_LABEL[kind];
 const pageTitle = isAlias ? title : `${title}（第${version}版）`;
 const path = isAlias ? `/${kind}` : `/${kind}/v${version}`;
 ---
 
-<BaseLayout pageTitle={pageTitle} breadcrumb={label} path={path}>
-  <header class="doc-header">
-    <h1>{title}</h1>
-    <p class="meta">
-      {status === 'current' ? `最新版（第${version}版）` : `第${version}版`}
-      ・効力発生日：{formatDate(effectiveDate)}
-    </p>
-  </header>
+<BaseLayout pageTitle={pageTitle} path={path}>
+  <div class="container">
+    <header class="page-hero">
+      <span class="eyebrow">{KIND_EYEBROW[kind]}</span>
+      <h1>{title}</h1>
+      <div class="meta-row">
+        {status === 'current' && <span class="chip is-accent">最新版</span>}
+        {status === 'draft' && <span class="chip is-warning">下書き</span>}
+        <span class="chip">第{version}版</span>
+        <span class="chip">効力発生日 {formatDate(effectiveDate)}</span>
+      </div>
+    </header>
 
-  {
-    status === 'past' && (
-      <aside class="notice" role="note">
-        これは過去版（第{version}版）です。
-        <a href={`/${kind}`}>最新版はこちら</a>。
-      </aside>
-    )
-  }
-  {
-    status === 'draft' && (
-      <aside class="notice draft" role="note">
-        下書き（第{version}版）です。開発サーバでだけ表示され、本番には公開されません。
-      </aside>
-    )
-  }
+    <div class="doc-grid">
+      <div class="doc-main">
+        {
+          status === 'past' && (
+            <aside class="notice" role="note">
+              これは過去版（第{version}版）です。<a href={`/${kind}`}>最新版を見る</a>
+            </aside>
+          )
+        }
+        {
+          status === 'draft' && (
+            <aside class="notice draft" role="note">
+              下書き（第{version}版）です。開発サーバでだけ表示され、本番には公開されません。
+            </aside>
+          )
+        }
 
-  <article class="doc-body">
-    <slot />
-  </article>
+        <TableOfContents headings={headings} variant="inline" />
 
-  <RevisionHistory kind={kind} entries={entries} />
+        <article class="prose">
+          <slot />
+        </article>
+
+        <RevisionHistory kind={kind} entries={entries} currentVersion={version} />
+      </div>
+
+      <TableOfContents headings={headings} variant="sidebar" />
+    </div>
+  </div>
 </BaseLayout>
+
+<style>
+  .doc-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (min-width: 1040px) {
+    .doc-grid {
+      grid-template-columns: minmax(0, 42rem) 15rem;
+      justify-content: space-between;
+      gap: 4rem;
+    }
+  }
+</style>

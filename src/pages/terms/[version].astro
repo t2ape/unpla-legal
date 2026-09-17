@@ -14,9 +14,9 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths;
 
 const { entry, entries } = Astro.props;
-const { Content } = await render(entry);
+const { Content, headings } = await render(entry);
 ---
 
-<LegalLayout kind="terms" entry={entry} entries={entries} isAlias={false}>
+<LegalLayout kind="terms" entry={entry} entries={entries} headings={headings} isAlias={false}>
   <Content />
 </LegalLayout>
