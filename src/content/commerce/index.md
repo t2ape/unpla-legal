@@ -1,7 +1,7 @@
 ---
 title: 特定商取引法に基づく表示
-updatedDate: 2026-09-17
-status: draft
+updatedDate: 2026-10-01
+status: published
 ---
 
 アンプラクエスト（英語表記：UnplaQuest。以下「本サービス」といいます。）の有料サービス「Pro」の販売条件は、以下のとおりです。
