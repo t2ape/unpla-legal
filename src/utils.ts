@@ -17,3 +17,6 @@ export const KIND_EYEBROW: Record<'terms' | 'privacy', string> = {
 
 // 特定商取引法に基づく表示の固定 URL。
 export const COMMERCE_PATH = '/tokushoho';
+
+// よくある質問の固定 URL。アプリの設定画面から開く。
+export const FAQ_PATH = '/faq';

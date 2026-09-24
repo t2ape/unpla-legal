@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCommerce, getVersions, pickCurrent } from '../lib/entries';
-import { COMMERCE_PATH, formatDate } from '../utils';
+import { COMMERCE_PATH, FAQ_PATH, formatDate } from '../utils';
 
 // リンクハブ：各ドキュメントの最新版へ誘導する。
 const terms = pickCurrent(await getVersions('terms'));
@@ -35,6 +35,13 @@ const cards = [
       ]
     : []),
   {
+    href: FAQ_PATH,
+    eyebrow: 'FAQ',
+    title: 'よくある質問',
+    meta: 'ブロックが外せない・効かないときの対処など',
+    icon: 'question',
+  },
+  {
     href: '/support',
     eyebrow: 'Support',
     title: 'サポート',
@@ -49,6 +56,7 @@ const ICONS: Record<string, string> = {
   shield: 'M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6zM9 12l2 2 4-4',
   receipt: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3',
   mail: 'M4 6h16v12H4zM4 7l8 6 8-6',
+  question: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01',
 };
 ---
 

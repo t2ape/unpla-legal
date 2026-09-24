@@ -29,3 +29,11 @@ export async function getCommerce(): Promise<CollectionEntry<'commerce'> | null>
   if (!entry) return null;
   return SHOW_DRAFTS || entry.data.status === 'published' ? entry : null;
 }
+
+// よくある質問。本番では下書きを除き、分類内の order 昇順で返す。
+export async function getFaqs(): Promise<CollectionEntry<'faq'>[]> {
+  const entries = await getCollection('faq');
+  return entries
+    .filter((e) => SHOW_DRAFTS || e.data.status === 'published')
+    .sort((a, b) => a.data.order - b.data.order);
+}

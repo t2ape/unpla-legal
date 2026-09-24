@@ -1,7 +1,7 @@
 ---
 // 全ページ共通の枠（ヘッダー・フッター・配色・文字組み）。
 import { getCommerce } from '../lib/entries';
-import { COMMERCE_PATH } from '../utils';
+import { COMMERCE_PATH, FAQ_PATH } from '../utils';
 
 interface Props {
   // <title> の「| UnplaQuest」より前。トップは省略する。
@@ -20,6 +20,7 @@ const nav = [
   { href: '/terms', label: '利用規約' },
   { href: '/privacy', label: 'プライバシー' },
   ...(commerce ? [{ href: COMMERCE_PATH, label: '特商法の表示' }] : []),
+  { href: FAQ_PATH, label: 'よくある質問' },
   { href: '/support', label: 'サポート' },
 ];
 const current = Astro.url.pathname.replace(/\/$/, '') || '/';
