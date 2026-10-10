@@ -1,6 +1,6 @@
 ---
 title: 特定商取引法に基づく表示
-updatedDate: 2026-10-01
+updatedDate: 2026-10-10
 status: published
 ---
 
