@@ -1,0 +1,108 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCommerce } from '../../lib/entries';
+import { COMMERCE_EYEBROW, formatDate, PATHS } from '../../utils';
+
+// 特定商取引法に基づく表示（/tokushoho）。本文は src/content/commerce/index.md。
+// 下書きの間は本番ビルドでページを生成しないため、生成数を 0 にできる動的ルートにしている
+// （静的ルートでは getStaticPaths が無視される）。path は常に undefined で /tokushoho だけを作る。
+export const getStaticPaths = (async () => {
+  const entry = await getCommerce();
+  return entry ? [{ params: { path: undefined }, props: { entry } }] : [];
+}) satisfies GetStaticPaths;
+
+const { entry } = Astro.props;
+const { title, updatedDate, status } = entry.data;
+const { Content } = await render(entry);
+---
+
+<BaseLayout pageTitle={title} path={PATHS.commerce}>
+  <div class="container">
+    <header class="page-hero">
+      <span class="eyebrow">{COMMERCE_EYEBROW}</span>
+      <h1>{title}</h1>
+      <div class="meta-row">
+        {status === 'draft' && <span class="chip is-warning">下書き</span>}
+        <span class="chip">最終更新日 {formatDate(updatedDate)}</span>
+      </div>
+    </header>
+
+    {
+      status === 'draft' && (
+        <aside class="notice draft" role="note">
+          下書きです。開発サーバでだけ表示され、本番には公開されません。
+        </aside>
+      )
+    }
+
+    <article class="prose commerce-sheet">
+      <Content />
+    </article>
+  </div>
+</BaseLayout>
+
+<style is:global>
+  /* 見出し（項目名）と内容の組を、広い画面では左右 2 列の表のように並べる。
+     Markdown は「## 項目名 → 段落/リスト」の平坦な並びなので、グリッドの列を指定して組む
+     （項目名は左列、内容は右列。内容が複数ブロックでも右列に積まれる）。 */
+  .commerce-sheet {
+    max-width: 52rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 0.5rem 1.4rem 1.25rem;
+  }
+  .commerce-sheet > p:first-child {
+    margin: 1rem 0 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+  .commerce-sheet > h2 {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    line-height: 1.7;
+    margin: 0;
+    padding: 1.25rem 0 0.25rem;
+    border-top: 1px solid var(--border);
+  }
+  .commerce-sheet > :not(h2):not(:first-child) {
+    font-size: 0.95rem;
+    margin: 0 0 0.6rem;
+  }
+  .commerce-sheet > ul {
+    padding-left: 1.2rem;
+  }
+  .commerce-sheet li {
+    margin: 0.25rem 0;
+  }
+  @media (min-width: 760px) {
+    .commerce-sheet {
+      display: grid;
+      grid-template-columns: 11rem minmax(0, 1fr);
+      column-gap: 1.5rem;
+      padding: 0.5rem 2rem 1.25rem;
+    }
+    .commerce-sheet > p:first-child {
+      grid-column: 1 / -1;
+    }
+    .commerce-sheet > h2 {
+      grid-column: 1;
+      padding: 1.2rem 0;
+    }
+    .commerce-sheet > :not(h2):not(:first-child) {
+      grid-column: 2;
+      margin: 0;
+      padding-bottom: 0.6rem;
+    }
+    .commerce-sheet > h2 + * {
+      border-top: 1px solid var(--border);
+      padding-top: 1.2rem;
+    }
+  }
+</style>

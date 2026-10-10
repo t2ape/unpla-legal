@@ -1,15 +1,14 @@
 ---
-import { getCollection, render } from 'astro:content';
+import { render } from 'astro:content';
 import LegalLayout from '../../layouts/LegalLayout.astro';
+import { getVersions, pickCurrent } from '../../lib/entries';
 
-// 版を version 降順で並べ、status: current を最新版として表示する。
-const entries = (await getCollection('terms')).sort(
-  (a, b) => b.data.version - a.data.version,
-);
-const current = entries.find((e) => e.data.status === 'current') ?? entries[0];
-const { Content } = await render(current);
+// 常に最新版（status: current）を返すエイリアス。
+const entries = await getVersions('terms');
+const current = pickCurrent(entries);
+const { Content, headings } = await render(current);
 ---
 
-<LegalLayout kind="terms" entry={current} entries={entries} isPast={false}>
+<LegalLayout kind="terms" entry={current} entries={entries} headings={headings} isAlias={true}>
   <Content />
 </LegalLayout>

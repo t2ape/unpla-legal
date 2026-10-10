@@ -1,0 +1,559 @@
+---
+// 全ページ共通の枠（ヘッダー・フッター・配色・文字組み）。
+import { Font } from 'astro:assets';
+import { getCommerce } from '../lib/entries';
+import { PATHS } from '../utils';
+
+interface Props {
+  // <title> の「| UnplaQuest」より前。トップは省略する。
+  pageTitle?: string;
+  // canonical のパス。
+  path: string;
+  description?: string;
+}
+
+const { pageTitle, path, description } = Astro.props;
+const title = pageTitle ? `${pageTitle} | UnplaQuest` : 'UnplaQuest 法務情報';
+
+// 特商法の表示は下書きの間はナビに出さない。
+const commerce = await getCommerce();
+const nav = [
+  { href: PATHS.terms, label: '利用規約' },
+  { href: PATHS.privacy, label: 'プライバシー' },
+  ...(commerce ? [{ href: PATHS.commerce, label: '特商法の表示' }] : []),
+  { href: PATHS.faq, label: 'よくある質問' },
+  { href: PATHS.support, label: 'サポート' },
+];
+const current = Astro.url.pathname.replace(/\/$/, '') || '/';
+// ナビの強調は配下のページ（/terms/v1 等）でも出す。aria-current は URL が一致するときだけ付ける。
+const isActive = (href: string) => current === href || current.startsWith(`${href}/`);
+// コピーライトの年。ビルドした時点の年になる（年が変わったあとは、次のデプロイで更新される）。
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <link rel="canonical" href={new URL(path, Astro.site)} />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#fbf7f1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#16120e" media="(prefers-color-scheme: dark)" />
+    <Font cssVariable="--font-zen-maru" />
+    <!-- 狭い画面のメニューは JS で開閉する。無効のときはナビを畳まずに出すため、有効かどうかを印として残す。 -->
+    <script is:inline>
+      document.documentElement.classList.add('js');
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">本文へ移動</a>
+
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a class="brand" href="/">
+          <span class="brand-name">UnplaQuest</span>
+          <span class="brand-sub">Legal</span>
+        </a>
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-label="メニュー"
+          aria-expanded="false"
+          aria-controls="site-nav"
+        >
+          <span class="nav-toggle-icon" aria-hidden="true"></span>
+        </button>
+        <nav id="site-nav" class="site-nav" aria-label="法務情報">
+          {
+            nav.map((item) => (
+              <a
+                href={item.href}
+                class:list={{ 'is-active': isActive(item.href) }}
+                aria-current={current === item.href ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            ))
+          }
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <p>&copy; {year} UnplaQuest</p>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<script>
+  // 狭い画面のメニューの開閉。開閉の状態は aria-expanded に持たせ、見た目は CSS がそれを見て切り替える。
+  const header = document.querySelector('.site-header');
+  const toggle = document.querySelector<HTMLButtonElement>('.nav-toggle');
+  const nav = document.querySelector('.site-nav');
+  if (header && toggle && nav) {
+    const isOpen = () => toggle.getAttribute('aria-expanded') === 'true';
+    const setOpen = (open: boolean) => toggle.setAttribute('aria-expanded', String(open));
+
+    toggle.addEventListener('click', () => setOpen(!isOpen()));
+    // リンクを押したら閉じる（ブラウザの「戻る」で開いたままのページが復元されないようにする）。
+    nav.addEventListener('click', (e) => {
+      if ((e.target as Element).closest('a')) setOpen(false);
+    });
+    document.addEventListener('click', (e) => {
+      if (isOpen() && !header.contains(e.target as Node)) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isOpen()) {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
+  }
+</script>
+
+<style is:global>
+  /* ── トークン ─────────────────────────────
+     暖色（オレンジのアクセントと焦げ茶の文字）の配色。
+     文字に使う --accent・--text-faint は地色に対して WCAG AA を満たす濃さにする。 */
+  :root {
+    --bg: #fbf7f1;
+    --surface: #ffffff;
+    --surface-muted: #f4ede3;
+    --text: #2b231d;
+    --text-muted: #6f6256;
+    --text-faint: #7c6f63;
+    --border: #e9dfd2;
+    --border-strong: #d9cbb9;
+    --accent: #b0500c;
+    --accent-strong: #8f400a;
+    --accent-soft: #fdf0e0;
+    --warning-soft: #fff4cf;
+    --warning-text: #6f5200;
+    --shadow: 0 1px 2px rgb(60 40 20 / 0.04), 0 10px 30px -14px rgb(60 40 20 / 0.18);
+    --radius: 16px;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
+      'Noto Sans JP', 'Helvetica Neue', Arial, sans-serif;
+    --font-display: var(--font-zen-maru), var(--font-body);
+    --header-h: 3.75rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16120e;
+      --surface: #1f1a15;
+      --surface-muted: #241e18;
+      --text: #efe7dc;
+      --text-muted: #b3a595;
+      --text-faint: #8f8173;
+      --border: #332b23;
+      --border-strong: #463b30;
+      --accent: #f5a959;
+      --accent-strong: #ffc285;
+      --accent-soft: #2e2217;
+      --warning-soft: #3a2f12;
+      --warning-text: #f3d27a;
+      --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.6);
+    }
+  }
+
+  /* ── ベース ───────────────────────────── */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  html {
+    color-scheme: light dark;
+    scroll-padding-top: calc(var(--header-h) + 1.5rem);
+    -webkit-text-size-adjust: 100%;
+  }
+  /* 目次などのページ内リンクは、動きを減らす設定でなければなめらかに移動する。 */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+  /* 動きを減らす設定のときは、開閉や移動のアニメーションをすべて止める。 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.9;
+    letter-spacing: 0.02em;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  main {
+    flex: 1;
+    width: 100%;
+  }
+  a {
+    color: var(--accent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: color 0.15s ease;
+  }
+  a:hover {
+    color: var(--accent-strong);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -3rem;
+    padding: 0.5rem 1rem;
+    background: var(--surface);
+    border-radius: 8px;
+    z-index: 100;
+  }
+  .skip-link:focus {
+    top: 0.75rem;
+  }
+
+  /* ── ヘッダー ─────────────────────────── */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: saturate(1.4) blur(14px);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .site-header-inner {
+    max-width: 72rem;
+    margin: 0 auto;
+    min-height: var(--header-h);
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--text);
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .brand:hover {
+    color: var(--text);
+  }
+  .brand-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.01em;
+  }
+  .brand-sub {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 0 0.5rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+  }
+  .site-nav {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .site-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .site-nav a {
+    white-space: nowrap;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .site-nav a:hover {
+    color: var(--text);
+    background: var(--surface-muted);
+  }
+  .site-nav a.is-active {
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
+  }
+  .nav-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin-right: -0.6rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: var(--text);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s ease;
+  }
+  .nav-toggle:hover {
+    background: var(--surface-muted);
+  }
+  /* 3 本線。開いている間は中央の線を消し、上下の線を交差させて × にする。 */
+  .nav-toggle-icon,
+  .nav-toggle-icon::before,
+  .nav-toggle-icon::after {
+    display: block;
+    width: 1.15rem;
+    height: 1.5px;
+    border-radius: 1px;
+    background: currentColor;
+    transition: transform 0.2s ease, top 0.2s ease, background 0.2s ease;
+  }
+  .nav-toggle-icon {
+    position: relative;
+  }
+  .nav-toggle-icon::before,
+  .nav-toggle-icon::after {
+    content: '';
+    position: absolute;
+    left: 0;
+  }
+  .nav-toggle-icon::before {
+    top: -6px;
+  }
+  .nav-toggle-icon::after {
+    top: 6px;
+  }
+  .nav-toggle[aria-expanded='true'] .nav-toggle-icon {
+    background: transparent;
+  }
+  .nav-toggle[aria-expanded='true'] .nav-toggle-icon::before {
+    top: 0;
+    transform: rotate(45deg);
+  }
+  .nav-toggle[aria-expanded='true'] .nav-toggle-icon::after {
+    top: 0;
+    transform: rotate(-45deg);
+  }
+  @media (max-width: 720px) {
+    /* ナビはボタンで開閉し、ヘッダーの下に重ねて出す。 */
+    .js .nav-toggle {
+      display: inline-flex;
+    }
+    .js .site-nav {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      flex-direction: column;
+      gap: 0.15rem;
+      padding: 0.5rem 0.75rem 0.85rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      visibility: hidden;
+      opacity: 0;
+      transform: translateY(-0.4rem);
+      transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s 0.18s;
+    }
+    .js .nav-toggle[aria-expanded='true'] + .site-nav {
+      visibility: visible;
+      opacity: 1;
+      transform: none;
+      transition-delay: 0s;
+    }
+    .js .site-nav a {
+      font-size: 0.95rem;
+      padding: 0.7rem 0.9rem;
+      border-radius: 10px;
+    }
+
+    /* JS が無効のときは開閉できないので、ナビを 2 段目に横スクロールで出す。 */
+    html:not(.js) .site-header-inner {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+      padding: 0.6rem 0 0;
+    }
+    html:not(.js) .brand {
+      padding: 0 1rem;
+    }
+    html:not(.js) .site-nav {
+      gap: 0;
+      padding: 0.35rem 0.6rem 0.5rem;
+    }
+    html:not(.js) .site-nav a {
+      font-size: 0.8rem;
+      padding: 0.3rem 0.6rem;
+    }
+  }
+
+  /* ── ページ見出し ─────────────────────── */
+  .container {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  .page-hero {
+    padding: 3.5rem 0 2.5rem;
+  }
+  .eyebrow {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.6rem;
+  }
+  .page-hero h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(1.75rem, 4.5vw, 2.5rem);
+    line-height: 1.35;
+    margin: 0;
+  }
+  .page-hero .lead {
+    color: var(--text-muted);
+    margin: 0.9rem 0 0;
+    max-width: 40rem;
+  }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.2rem 0.75rem;
+    white-space: nowrap;
+  }
+  .chip.is-accent {
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-color: transparent;
+    font-weight: 600;
+  }
+  .chip.is-warning {
+    color: var(--warning-text);
+    background: var(--warning-soft);
+    border-color: transparent;
+    font-weight: 600;
+  }
+
+  /* ── お知らせ ─────────────────────────── */
+  .notice {
+    margin: 0 0 2.5rem;
+    padding: 0.9rem 1.15rem;
+    border-radius: 12px;
+    background: var(--accent-soft);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    max-width: 42rem;
+  }
+  .notice.draft {
+    background: var(--warning-soft);
+    color: var(--warning-text);
+  }
+
+  /* ── 本文（Markdown） ─────────────────── */
+  .prose {
+    max-width: 42rem;
+    min-width: 0;
+  }
+  .prose > :first-child {
+    margin-top: 0;
+  }
+  .prose p {
+    margin: 0 0 1.1em;
+  }
+  .prose h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.22rem;
+    line-height: 1.55;
+    margin: 3rem 0 1rem;
+    padding-top: 2.25rem;
+    border-top: 1px solid var(--border);
+  }
+  .prose h3 {
+    font-size: 1.05rem;
+    margin: 2rem 0 0.75rem;
+  }
+  .prose ol,
+  .prose ul {
+    padding-left: 1.6rem;
+    margin: 0 0 1.1em;
+  }
+  .prose li {
+    margin: 0.55rem 0;
+    padding-left: 0.2rem;
+  }
+  .prose li::marker {
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .prose li > p {
+    margin: 0.5rem 0;
+  }
+  .prose a {
+    word-break: break-all;
+  }
+
+  /* ── フッター ─────────────────────────── */
+  .site-footer {
+    margin-top: clamp(3.5rem, 10vw, 6rem);
+    border-top: 1px solid var(--border);
+    background: var(--surface-muted);
+  }
+  /* 1 行だけなので中央に置く。下はホームインジケータの分を空ける。 */
+  .site-footer-inner {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 1.4rem 1rem calc(1.4rem + env(safe-area-inset-bottom));
+    text-align: center;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+  .site-footer p {
+    margin: 0;
+  }
+</style>
