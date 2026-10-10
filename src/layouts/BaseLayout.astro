@@ -121,14 +121,14 @@ const year = new Date().getFullYear();
 <style is:global>
   /* ── トークン ─────────────────────────────
      暖色（オレンジのアクセントと焦げ茶の文字）の配色。
-     文字に使う --accent は地色に対して WCAG AA を満たす濃さにする。 */
+     文字に使う --accent・--text-faint は地色に対して WCAG AA を満たす濃さにする。 */
   :root {
     --bg: #fbf7f1;
     --surface: #ffffff;
     --surface-muted: #f4ede3;
     --text: #2b231d;
     --text-muted: #6f6256;
-    --text-faint: #a3968a;
+    --text-faint: #7c6f63;
     --border: #e9dfd2;
     --border-strong: #d9cbb9;
     --accent: #b0500c;
@@ -151,7 +151,7 @@ const year = new Date().getFullYear();
       --surface-muted: #241e18;
       --text: #efe7dc;
       --text-muted: #b3a595;
-      --text-faint: #7f7265;
+      --text-faint: #8f8173;
       --border: #332b23;
       --border-strong: #463b30;
       --accent: #f5a959;
@@ -171,9 +171,14 @@ const year = new Date().getFullYear();
   }
   html {
     color-scheme: light dark;
-    scroll-behavior: smooth;
     scroll-padding-top: calc(var(--header-h) + 1.5rem);
     -webkit-text-size-adjust: 100%;
+  }
+  /* 目次などのページ内リンクは、動きを減らす設定でなければなめらかに移動する。 */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
   body {
     margin: 0;
