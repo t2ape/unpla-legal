@@ -23,6 +23,7 @@ const nav = [
   { href: '/support', label: 'サポート' },
 ];
 const current = Astro.url.pathname.replace(/\/$/, '') || '/';
+// ナビの強調は配下のページ（/terms/v1 等）でも出す。aria-current は URL が一致するときだけ付ける。
 const isActive = (href: string) => current === href || current.startsWith(`${href}/`);
 // コピーライトの年。ビルドした時点の年になる（年が変わったあとは、次のデプロイで更新される）。
 const year = new Date().getFullYear();
@@ -71,7 +72,11 @@ const year = new Date().getFullYear();
         <nav id="site-nav" class="site-nav" aria-label="法務情報">
           {
             nav.map((item) => (
-              <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
+              <a
+                href={item.href}
+                class:list={{ 'is-active': isActive(item.href) }}
+                aria-current={current === item.href ? 'page' : undefined}
+              >
                 {item.label}
               </a>
             ))
@@ -133,7 +138,6 @@ const year = new Date().getFullYear();
     --border-strong: #d9cbb9;
     --accent: #b0500c;
     --accent-strong: #8f400a;
-    --accent-bright: #f29a2e;
     --accent-soft: #fdf0e0;
     --warning-soft: #fff4cf;
     --warning-text: #6f5200;
@@ -207,7 +211,7 @@ const year = new Date().getFullYear();
     color: var(--accent-strong);
   }
   :focus-visible {
-    outline: 2px solid var(--accent-bright);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -293,7 +297,7 @@ const year = new Date().getFullYear();
     color: var(--text);
     background: var(--surface-muted);
   }
-  .site-nav a[aria-current='page'] {
+  .site-nav a.is-active {
     color: var(--accent);
     background: var(--accent-soft);
     font-weight: 600;
