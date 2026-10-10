@@ -3,7 +3,7 @@ import type { GetStaticPaths } from 'astro';
 import { render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCommerce } from '../../lib/entries';
-import { COMMERCE_PATH, formatDate } from '../../utils';
+import { COMMERCE_EYEBROW, formatDate, PATHS } from '../../utils';
 
 // 特定商取引法に基づく表示（/tokushoho）。本文は src/content/commerce/index.md。
 // 下書きの間は本番ビルドでページを生成しないため、生成数を 0 にできる動的ルートにしている
@@ -18,10 +18,10 @@ const { title, updatedDate, status } = entry.data;
 const { Content } = await render(entry);
 ---
 
-<BaseLayout pageTitle={title} path={COMMERCE_PATH}>
+<BaseLayout pageTitle={title} path={PATHS.commerce}>
   <div class="container">
     <header class="page-hero">
-      <span class="eyebrow">Commercial Disclosure</span>
+      <span class="eyebrow">{COMMERCE_EYEBROW}</span>
       <h1>{title}</h1>
       <div class="meta-row">
         {status === 'draft' && <span class="chip is-warning">下書き</span>}

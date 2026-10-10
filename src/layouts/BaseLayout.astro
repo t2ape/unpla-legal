@@ -1,7 +1,7 @@
 ---
 // 全ページ共通の枠（ヘッダー・フッター・配色・文字組み）。
 import { getCommerce } from '../lib/entries';
-import { COMMERCE_PATH } from '../utils';
+import { PATHS } from '../utils';
 
 interface Props {
   // <title> の「| UnplaQuest」より前。トップは省略する。
@@ -17,10 +17,10 @@ const title = pageTitle ? `${pageTitle} | UnplaQuest` : 'UnplaQuest 法務情報
 // 特商法の表示は下書きの間はナビに出さない。
 const commerce = await getCommerce();
 const nav = [
-  { href: '/terms', label: '利用規約' },
-  { href: '/privacy', label: 'プライバシー' },
-  ...(commerce ? [{ href: COMMERCE_PATH, label: '特商法の表示' }] : []),
-  { href: '/support', label: 'サポート' },
+  { href: PATHS.terms, label: '利用規約' },
+  { href: PATHS.privacy, label: 'プライバシー' },
+  ...(commerce ? [{ href: PATHS.commerce, label: '特商法の表示' }] : []),
+  { href: PATHS.support, label: 'サポート' },
 ];
 const current = Astro.url.pathname.replace(/\/$/, '') || '/';
 // ナビの強調は配下のページ（/terms/v1 等）でも出す。aria-current は URL が一致するときだけ付ける。

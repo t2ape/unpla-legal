@@ -14,12 +14,13 @@ export async function getVersions(kind: Kind): Promise<LegalEntry[]> {
     .sort((a, b) => b.data.version - a.data.version);
 }
 
-// /terms・/privacy が指す最新版。current が無ければ下書き以外で最も新しい版。
+// /terms・/privacy が指す最新版。「最新版」の表示は status で出し分けるので、current はちょうど 1 つにする
+// （改定のときに旧版を past にし忘れると、ここでビルドが止まる）。
 export function pickCurrent(entries: LegalEntry[]): LegalEntry {
-  const current =
-    entries.find((e) => e.data.status === 'current') ??
-    entries.find((e) => e.data.status !== 'draft');
-  if (!current) throw new Error('公開できる版がありません');
+  const [current, ...rest] = entries.filter((e) => e.data.status === 'current');
+  if (!current || rest.length > 0) {
+    throw new Error(`status: current の版はちょうど 1 つにしてください（現在 ${rest.length + (current ? 1 : 0)} 個）`);
+  }
   return current;
 }
 

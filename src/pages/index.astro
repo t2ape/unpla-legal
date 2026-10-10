@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCommerce, getVersions, pickCurrent } from '../lib/entries';
-import { COMMERCE_PATH, formatDate } from '../utils';
+import { COMMERCE_EYEBROW, formatDate, KIND_EYEBROW, PATHS } from '../utils';
 
 // リンクハブ：各ドキュメントの最新版へ誘導する。
 const terms = pickCurrent(await getVersions('terms'));
@@ -10,29 +10,29 @@ const commerce = await getCommerce();
 
 const cards = [
   {
-    href: '/terms',
-    eyebrow: 'Terms of Service',
+    href: PATHS.terms,
+    eyebrow: KIND_EYEBROW.terms,
     title: terms.data.title,
     meta: `第${terms.data.version}版・効力発生日 ${formatDate(terms.data.effectiveDate)}`,
   },
   {
-    href: '/privacy',
-    eyebrow: 'Privacy Policy',
+    href: PATHS.privacy,
+    eyebrow: KIND_EYEBROW.privacy,
     title: privacy.data.title,
     meta: `第${privacy.data.version}版・効力発生日 ${formatDate(privacy.data.effectiveDate)}`,
   },
   ...(commerce
     ? [
         {
-          href: COMMERCE_PATH,
-          eyebrow: 'Commercial Disclosure',
+          href: PATHS.commerce,
+          eyebrow: COMMERCE_EYEBROW,
           title: commerce.data.title,
           meta: `最終更新日 ${formatDate(commerce.data.updatedDate)}`,
         },
       ]
     : []),
   {
-    href: '/support',
+    href: PATHS.support,
     eyebrow: 'Support',
     title: 'サポート',
     meta: 'お問い合わせ・不具合のご連絡',

@@ -15,5 +15,18 @@ export const KIND_EYEBROW: Record<'terms' | 'privacy', string> = {
   privacy: 'Privacy Policy',
 };
 
-// 特定商取引法に基づく表示の固定 URL。
-export const COMMERCE_PATH = '/tokushoho';
+// 各ページの URL。
+export const PATHS = {
+  terms: '/terms',
+  privacy: '/privacy',
+  commerce: '/tokushoho',
+  support: '/support',
+} as const;
+
+// 規約・PP の版ごとの固定 URL（/terms/v1 等）。
+export function versionPath(kind: 'terms' | 'privacy', version: number): string {
+  return `${PATHS[kind]}/v${version}`;
+}
+
+// 特定商取引法に基づく表示の、見出しの上に添える英字ラベル。
+export const COMMERCE_EYEBROW = 'Commercial Disclosure';
