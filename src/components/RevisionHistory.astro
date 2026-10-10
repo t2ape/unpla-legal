@@ -1,6 +1,6 @@
 ---
 import type { Kind, LegalEntry } from '../lib/entries';
-import { formatDate } from '../utils';
+import { formatDate, versionPath } from '../utils';
 
 interface Props {
   kind: Kind;
@@ -22,7 +22,7 @@ const { kind, entries, currentVersion } = Astro.props;
         const isViewing = version === currentVersion;
         return (
           <li class:list={{ 'is-viewing': isViewing }}>
-            <a href={`/${kind}/v${version}`} aria-current={isViewing ? 'page' : undefined}>
+            <a href={versionPath(kind, version)} aria-current={isViewing ? 'true' : undefined}>
               <span class="version">第{version}版</span>
               <span class="date">効力発生日 {formatDate(effectiveDate)}</span>
               {status === 'current' && <span class="badge">最新版</span>}

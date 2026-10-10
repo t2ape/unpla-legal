@@ -3,19 +3,19 @@
 // 問い合わせフォームは設けず、連絡先メールと基本的な案内のみを掲載する静的ページ。
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCommerce } from '../lib/entries';
-import { COMMERCE_PATH, FAQ_PATH } from '../utils';
+import { KIND_LABEL, PATHS } from '../utils';
 
 const supportEmail = 'support@unpla.app';
 // Apple は特商法の表示を「アプリ内かサポートサイト」に求めるので、ここから辿れるようにする。
 const commerce = await getCommerce();
 const links = [
-  { href: '/terms', label: '利用規約' },
-  { href: '/privacy', label: 'プライバシーポリシー' },
-  ...(commerce ? [{ href: COMMERCE_PATH, label: commerce.data.title }] : []),
+  { href: PATHS.terms, label: KIND_LABEL.terms },
+  { href: PATHS.privacy, label: KIND_LABEL.privacy },
+  ...(commerce ? [{ href: PATHS.commerce, label: commerce.data.title }] : []),
 ];
 ---
 
-<BaseLayout pageTitle="サポート" path="/support">
+<BaseLayout pageTitle="サポート" path={PATHS.support}>
   <div class="container narrow">
     <header class="page-hero">
       <span class="eyebrow">Support</span>
@@ -25,7 +25,7 @@ const links = [
       </p>
     </header>
 
-    <a class="faq-link" href={FAQ_PATH}>
+    <a class="faq-link" href={PATHS.faq}>
       <span class="faq-body">
         <span class="faq-title">よくある質問</span>
         <span class="faq-meta">ブロックが外せない・効かないときの対処など。お問い合わせの前にご覧ください。</span>

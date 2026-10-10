@@ -2,7 +2,7 @@
 import { render } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getFaqs } from '../lib/entries';
-import { FAQ_PATH } from '../utils';
+import { PATHS } from '../utils';
 
 // よくある質問（/faq）。本文は src/content/faq/<id>.md に 1 問 1 ファイルで置く。
 // 各質問は id（ファイル名）をアンカーに持ち、アプリからは /faq#<id> で直接開く。
@@ -27,14 +27,14 @@ const sections = await Promise.all(
 ).then((all) => all.filter((section) => section.items.length > 0));
 ---
 
-<BaseLayout pageTitle="よくある質問" path={FAQ_PATH}>
+<BaseLayout pageTitle="よくある質問" path={PATHS.faq}>
   <div class="container narrow">
     <header class="page-hero">
       <span class="eyebrow">FAQ</span>
       <h1>よくある質問</h1>
       <p class="lead">
         アンプラクエスト（UnplaQuest）でよくいただくご質問をまとめています。解決しない場合は<a
-          href="/support">サポート</a
+          href={PATHS.support}>サポート</a
         >までご連絡ください。
       </p>
     </header>

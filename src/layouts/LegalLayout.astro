@@ -4,7 +4,7 @@ import BaseLayout from './BaseLayout.astro';
 import RevisionHistory from '../components/RevisionHistory.astro';
 import TableOfContents from '../components/TableOfContents.astro';
 import type { Kind, LegalEntry } from '../lib/entries';
-import { formatDate, KIND_EYEBROW } from '../utils';
+import { formatDate, KIND_EYEBROW, PATHS, versionPath } from '../utils';
 
 interface Props {
   kind: Kind;
@@ -21,7 +21,7 @@ interface Props {
 const { kind, entry, entries, headings, isAlias } = Astro.props;
 const { title, version, effectiveDate, status } = entry.data;
 const pageTitle = isAlias ? title : `${title}（第${version}版）`;
-const path = isAlias ? `/${kind}` : `/${kind}/v${version}`;
+const path = isAlias ? PATHS[kind] : versionPath(kind, version);
 ---
 
 <BaseLayout pageTitle={pageTitle} path={path}>
@@ -42,7 +42,7 @@ const path = isAlias ? `/${kind}` : `/${kind}/v${version}`;
         {
           status === 'past' && (
             <aside class="notice" role="note">
-              これは過去版（第{version}版）です。<a href={`/${kind}`}>最新版を見る</a>
+              これは過去版（第{version}版）です。<a href={PATHS[kind]}>最新版を見る</a>
             </aside>
           )
         }
