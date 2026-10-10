@@ -1,6 +1,6 @@
 # unpla-legal
 
-UnplaQuest の法務ドキュメント（利用規約・プライバシーポリシー・特定商取引法に基づく表示）を `https://legal.unpla.app` で公開するサイト。
+UnplaQuest の法務ドキュメント（利用規約・プライバシーポリシー・特定商取引法に基づく表示）とよくある質問を `https://legal.unpla.app` で公開するサイト。
 
 - SSG: [Astro](https://astro.build/)（Markdown を正本に、最新版エイリアスと過去版の固定 URL を生成）
 - ホスティング: GitHub Pages（`main` への push で GitHub Actions が自動デプロイ）
@@ -14,6 +14,7 @@ UnplaQuest の法務ドキュメント（利用規約・プライバシーポリ
 | `/terms` | 利用規約・**常に最新版**（アプリ／App Store に載せる安定 URL） |
 | `/privacy` | プライバシーポリシー・**常に最新版** |
 | `/tokushoho` | 特定商取引法に基づく表示（版を持たない。最終更新日のみ） |
+| `/faq` | よくある質問。質問ごとに `/faq#<id>` のアンカーを持ち、アプリの設定画面から開く |
 | `/support` | サポートページ（App Store Connect の**サポート URL** に登録する安定 URL）。規約・PP・特商法の表示へリンクする |
 | `/terms/v1`, `/privacy/v1` | 各**版の固定 URL**（一度公開したら変えない） |
 
@@ -45,6 +46,26 @@ status: current          # current（最新） | past（過去版） | draft（�
 - 規約・PP の版は、アプリ側 `legal_documents.current_version` と対応している。版を上げて公開し、DB の版数を上げると、アプリで再同意が求められる。
 
 特定商取引法に基づく表示は `src/content/commerce/index.md` の 1 ファイル。同意を取る書類ではない（版を上げても再同意を出さない）ので、版を持たず書き換えて `updatedDate` を更新する。`status` は `published` / `draft`。規約・PP に同居させないのは、販売条件の修正のたびに PP の版上げ（＝再同意）を起こさないため。
+
+よくある質問は `src/content/faq/<id>.md` に 1 問 1 ファイルで置く。ファイル名がそのまま `/faq#<id>` のアンカーになり、アプリから特定の質問へ直接リンクするので、**公開後はファイル名を変えない**。
+
+```yaml
+---
+question: ブロックを外せなくて困っています # 質問文
+category: trouble # trouble | strict | feature | account（見出しと並び順は src/pages/faq.astro）
+order: 1          # 分類内の並び順（小さいほど上）
+status: published # published | draft（draft は `npm run dev` でだけ出る）
+---
+```
+
+アプリから直接リンクしている質問は次のとおり。ファイル名の変更・削除の前にアプリ側（`SupportLinks.faqURL(questionID:)` の呼び出し元）を確認する。
+
+| 質問 id | アプリの入口 |
+| --- | --- |
+| （ページ先頭） | 設定 →「ヘルプ・フィードバック」→「よくある質問」 |
+| `block-not-working` | 設定 →「ブロックの再読み込み」後の完了アラート →「よくある質問を見る」 |
+
+回答は です/ます の平叙で書き、アプリの画面上の文言（ボタン名・設定名）と一字一句そろえる。アプリの挙動を変えたら、対応する質問も合わせて直す。
 
 ## リリースフロー
 

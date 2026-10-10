@@ -21,6 +21,7 @@ const nav = [
   { href: PATHS.terms, label: '利用規約' },
   { href: PATHS.privacy, label: 'プライバシー' },
   ...(commerce ? [{ href: PATHS.commerce, label: '特商法の表示' }] : []),
+  { href: PATHS.faq, label: 'よくある質問' },
   { href: PATHS.support, label: 'サポート' },
 ];
 const current = Astro.url.pathname.replace(/\/$/, '') || '/';

@@ -20,6 +20,8 @@ export const PATHS = {
   terms: '/terms',
   privacy: '/privacy',
   commerce: '/tokushoho',
+  // アプリの設定画面から開く。
+  faq: '/faq',
   support: '/support',
 } as const;
 

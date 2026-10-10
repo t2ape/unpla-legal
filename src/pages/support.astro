@@ -25,6 +25,14 @@ const links = [
       </p>
     </header>
 
+    <a class="faq-link" href={PATHS.faq}>
+      <span class="faq-body">
+        <span class="faq-title">よくある質問</span>
+        <span class="faq-meta">ブロックが外せない・効かないときの対処など。お問い合わせの前にご覧ください。</span>
+      </span>
+      <span aria-hidden="true">→</span>
+    </a>
+
     <section class="contact" aria-labelledby="contact-heading">
       <h2 id="contact-heading">お問い合わせ先</h2>
       <a class="mail-button" href={`mailto:${supportEmail}`}>
@@ -65,6 +73,36 @@ const links = [
     font-family: var(--font-display);
     font-size: 1.05rem;
     margin: 0 0 1rem;
+  }
+  .faq-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0 0 1.5rem;
+    padding: 1.25rem 1.75rem;
+    background: var(--accent-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    text-decoration: none;
+  }
+  .faq-link:hover {
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .faq-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+  }
+  .faq-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+  }
+  .faq-meta {
+    font-size: 0.85rem;
+    color: var(--text-muted);
   }
   .contact {
     padding: 1.75rem;
