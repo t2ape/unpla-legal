@@ -1,8 +1,10 @@
-// ビルドしたページ（dist/**/*.html）の、サイトの中へのリンクを確かめる。反するとビルドを止める。
-//   1. 行き先のページと、#id があればその id が実在する
-//      （未訳・下書きの質問、作っていない版、消したページへのリンクを止める）。
-//      本文のリンク（<a href>）のほか、レイアウトが書く <link rel="alternate">（言語の切り替え先）と
-//      <link rel="canonical"> も確かめる。
+// ビルドしたページ（dist/**/*.html）の中の、サイトの中を指す URL をすべて確かめる。反するとビルドを止める。
+//   1. 行き先のファイルと、#id があればその id が実在する
+//      （未訳・下書きの質問、作っていない版、消したページ・画像へのリンクを止める）。
+//      URL を持つ属性（href・src・srcset・action・poster）はすべて見る（<a>・<link rel="alternate">・
+//      canonical・画像・スタイルシートなど、要素の種類を問わない）。
+//      行き先は dist のファイルの一覧と、大文字・小文字まで完全に一致するかで見る（GitHub Pages は区別するので、
+//      大文字・小文字を区別しない macOS で通っても公開すると 404 になる、ということがないようにする）。
 //   2. 本文のリンク（<a href>）は、もう一方の言語にも同じページがあるのに、そちらへ hreflang 無しでリンクしない
 //      （英訳のとき、日本語の /support などを写したままにする誤りを止める。逆向きも同じ）。
 //      言語の切り替え・参考訳の注記など、わざと別の言語へ飛ばすリンクには hreflang を付ける。
@@ -13,7 +15,6 @@
 // サイトの中かどうかはホスト名で見る（http:// で書いた https://legal.unpla.app のリンクも確かめる）。
 // `npm run build` のときだけ働く（開発サーバでは働かない）。PR の CI でもビルドするので、そこで止まる。
 import { readdir, readFile } from 'node:fs/promises';
-import { existsSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
@@ -30,10 +31,18 @@ interface Node {
 
 interface Link {
   href: string;
-  // 本文のリンク（<a>）か、レイアウトが書く <link>（言語の切り替え先・canonical）か。
-  kind: 'a' | 'link';
+  // 本文のリンク（<a href>）か。言語の決まり（2）は本文のリンクにだけ当てはめる。
+  isAnchor: boolean;
   hreflang?: string;
 }
+
+// URL を持つ属性。srcset は「URL 幅, URL 幅, …」の形なので、URL の部分だけを取り出す。
+const URL_ATTRS = ['href', 'src', 'action', 'poster'];
+const srcsetUrls = (srcset: string) =>
+  srcset
+    .split(',')
+    .map((candidate) => candidate.trim().split(/\s+/)[0])
+    .filter(Boolean);
 
 interface Page {
   ids: Set<string>;
@@ -46,14 +55,14 @@ function readPage(html: string): Page {
     const attr = (name: string) => node.attrs?.find((a) => a.name === name)?.value;
     const id = attr('id');
     if (id) page.ids.add(id);
-    const href = attr('href');
-    if (href !== undefined) {
-      const rel = (attr('rel') ?? '').split(/\s+/);
-      if (node.nodeName === 'a') page.links.push({ href, kind: 'a', hreflang: attr('hreflang') });
-      if (node.nodeName === 'link' && (rel.includes('alternate') || rel.includes('canonical'))) {
-        page.links.push({ href, kind: 'link' });
-      }
+    for (const name of URL_ATTRS) {
+      const href = attr(name);
+      if (href === undefined) continue;
+      const isAnchor = node.nodeName === 'a' && name === 'href';
+      page.links.push({ href, isAnchor, hreflang: isAnchor ? attr('hreflang') : undefined });
     }
+    const srcset = attr('srcset');
+    if (srcset) for (const href of srcsetUrls(srcset)) page.links.push({ href, isAnchor: false });
     node.childNodes?.forEach(walk);
     if (node.content) walk(node.content);
   };
@@ -61,16 +70,16 @@ function readPage(html: string): Page {
   return page;
 }
 
-async function htmlFiles(dir: string): Promise<string[]> {
+// dist の中のすべてのファイルを、サイトの URL のパス（/en/faq/index.html、/_astro/x.css）で返す。
+async function distFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { recursive: true, withFileTypes: true });
-  return entries.filter((e) => e.isFile() && e.name.endsWith('.html')).map((e) => join(e.parentPath, e.name));
+  return entries
+    .filter((e) => e.isFile())
+    .map((e) => `/${relative(dir, join(e.parentPath, e.name)).split(sep).join('/')}`);
 }
 
-// dist の中のファイルを、サイトの URL のパスに直す（en/faq/index.html → /en/faq/）。
-function urlPathOf(distDir: string, file: string): string {
-  const path = `/${relative(distDir, file).split(sep).join('/')}`;
-  return path.endsWith('/index.html') ? path.slice(0, -'index.html'.length) : path;
-}
+// ページのファイルを、そのページの URL のパスに直す（/en/faq/index.html → /en/faq/）。
+const pageUrlPath = (file: string) => (file.endsWith('/index.html') ? file.slice(0, -'index.html'.length) : file);
 
 // パスの言語と、言語の前置き（/en）を除いたパス。前置きの決まりは src/utils.ts の localePath と同じ。
 function splitLocale(path: string): { locale: Locale; rest: string } {
@@ -105,20 +114,24 @@ export default function checkLinks(): AstroIntegration {
         if (!site) throw new Error('check-links: astro.config の site が必要です');
         const siteUrl = site;
         const distDir = fileURLToPath(dir);
-        // 行き先のパスに対応する dist のファイル（/en/faq → en/faq/index.html、/_astro/x.css → そのファイル）。
+        const files = new Set(await distFiles(distDir));
+        // 行き先のパスに対応する dist のファイル（/en/faq → /en/faq/index.html、/_astro/x.css → そのファイル）。
+        // 一覧と完全に一致するものだけを認める（大文字・小文字も区別する）。
         const fileFor = (path: string): string | undefined => {
-          const base = join(distDir, path);
-          return [join(base, 'index.html'), `${base}.html`, base].find((f) => existsSync(f) && statSync(f).isFile());
+          const base = path.endsWith('/') ? path.slice(0, -1) : path;
+          return [`${base}/index.html`, `${base}.html`, base].find((f) => files.has(f));
         };
 
         const pages = new Map<string, Page>();
-        for (const file of await htmlFiles(distDir)) pages.set(file, readPage(await readFile(file, 'utf8')));
+        for (const file of files) {
+          if (file.endsWith('.html')) pages.set(file, readPage(await readFile(join(distDir, file), 'utf8')));
+        }
 
         const errors: string[] = [];
         for (const [file, page] of pages) {
-          const from = urlPathOf(distDir, file);
+          const from = pageUrlPath(file);
           const fromLocale = splitLocale(from).locale;
-          for (const { href, kind, hreflang } of page.links) {
+          for (const { href, isAnchor, hreflang } of page.links) {
             const error = (message: string) => errors.push(`${from} → ${href}: ${message}`);
             let url: URL;
             try {
@@ -137,18 +150,24 @@ export default function checkLinks(): AstroIntegration {
             }
             const target = fileFor(path);
             if (!target) {
-              error('行き先のページがありません');
+              error('行き先のファイルがありません');
               continue;
             }
             const targetPage = pages.get(target);
             if (anchor && targetPage && !targetPage.ids.has(anchor)) {
               error(`行き先のページに id="${anchor}" がありません（未訳・下書きの質問ではないか）`);
             }
-            if (kind !== 'a') continue;
+            if (!isAnchor) continue;
             const { locale: toLocale, rest } = splitLocale(path);
             if (toLocale !== fromLocale && primaryLanguage(hreflang) !== toLocale) {
               const counterpart = localePath(fromLocale, rest);
-              if (fileFor(counterpart)) {
+              const counterpartFile = fileFor(counterpart);
+              if (!counterpartFile) continue; // 日本語にしかないページ（特商法の表示）へのリンクはかまわない
+              if (anchor && !pages.get(counterpartFile)?.ids.has(anchor)) {
+                error(
+                  `言語の違うページへのリンクです。同じ言語の ${counterpart} には id="${anchor}" がまだありません（その質問・見出しを訳してから、${counterpart}${url.hash} にリンクしてください）`,
+                );
+              } else {
                 error(`言語の違うページへのリンクです。同じ言語の ${counterpart}${url.hash} にしてください`);
               }
             }

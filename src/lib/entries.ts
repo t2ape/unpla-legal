@@ -57,7 +57,7 @@ async function loadLegal(kind: Kind): Promise<{ ja: JaLegal[]; en: EnLegal[] }> 
 //      このサイトは「最新版＝効力のある版」として出すので、効力発生日より前に公開すると、まだ効力の無い版が
 //      最新版に、効力のある版が過去版に見えてしまう。改定は効力発生日の当日以降にマージする。
 // 日本語の下書きは、英訳より先に置いてよい。
-function assertVersions(kind: Kind, ja: JaLegal[], en: EnLegal[]): void {
+function assertVersions(kind: Kind, ja: JaLegal[], en: EnLegal[], oldestEn: number): void {
   const errors: string[] = [];
   for (const entry of ja) {
     if (entry.id !== `v${entry.data.version}`) {
@@ -75,7 +75,6 @@ function assertVersions(kind: Kind, ja: JaLegal[], en: EnLegal[]): void {
     }
   }
   const enIds = new Set(en.map((e) => e.id));
-  const oldestEn = Math.min(...ja.filter((e) => enIds.has(e.id)).map((e) => e.data.version));
   for (const entry of ja) {
     const { version, status } = entry.data;
     if (enIds.has(entry.id)) continue;
@@ -103,14 +102,17 @@ function assertVersions(kind: Kind, ja: JaLegal[], en: EnLegal[]): void {
 // 公開対象の版（version 降順）を言語ごとに。日本語にだけある過去版（英訳を作る前の版）も添える。
 async function loadVersions(kind: Kind) {
   const { ja, en } = await loadLegal(kind);
-  assertVersions(kind, ja, en);
+  // 英語のいちばん古い版（下書きも含む）。これより前の版だけを「日本語にだけある過去版」として認め、
+  // 英語の改定履歴にも案内する（assertVersions の 4 と、下の japaneseOnly とで同じ値を使う）。
+  const enIds = new Set(en.map((e) => e.id));
+  const oldestEn = Math.min(...ja.filter((e) => enIds.has(e.id)).map((e) => e.data.version));
+  assertVersions(kind, ja, en, oldestEn);
   const jaById = new Map(ja.map((e) => [e.id, e]));
   const enMerged: LegalEntry[] = en.map((e) => ({ ...e, data: { ...jaById.get(e.id)!.data, title: e.data.title } }));
   const visible = (entries: LegalEntry[]) =>
     entries
       .filter((e) => SHOW_DRAFTS || e.data.status !== 'draft')
       .sort((a, b) => b.data.version - a.data.version);
-  const oldestEn = Math.min(...enMerged.map((e) => e.data.version));
   return {
     ja: visible(ja),
     en: visible(enMerged),
