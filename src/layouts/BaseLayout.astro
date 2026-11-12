@@ -29,7 +29,8 @@ const hasFaq = await hasFaqPage(locale);
 const nav = [
   { href: localePath(locale, PATHS.terms), label: t.nav.terms },
   { href: localePath(locale, PATHS.privacy), label: t.nav.privacy },
-  ...(commerce && t.nav.commerce ? [{ href: PATHS.commerce, label: t.nav.commerce }] : []),
+  // 出すかどうかは commerce（getCommerce）だけで決める。
+  ...(commerce ? [{ href: PATHS.commerce, label: t.nav.commerce ?? commerce.data.title }] : []),
   ...(hasFaq ? [{ href: localePath(locale, PATHS.faq), label: t.nav.faq }] : []),
   { href: localePath(locale, PATHS.support), label: t.nav.support },
 ];

@@ -97,6 +97,7 @@ export async function getVersions(kind: Kind, locale: Locale = DEFAULT_LOCALE): 
   const [ja, en] = await Promise.all([loadLegal(kind, 'ja'), loadLegal(kind, 'en')]);
   // どちらの言語のページを作るときにも確かめる（片方だけ直したビルドを通さない）。
   assertLocaleParity(kind, ja, en);
+  assertEnglishSiteLinks(`${kind}（en）`, en);
   return (locale === 'en' ? en : ja)
     .filter((e) => SHOW_DRAFTS || e.data.status !== 'draft')
     .sort((a, b) => b.data.version - a.data.version);
@@ -163,7 +164,41 @@ export async function getFaqs(locale: Locale = DEFAULT_LOCALE): Promise<FaqEntry
     .filter((e) => SHOW_DRAFTS || e.data.status === 'published')
     .sort((a, b) => a.data.order - b.data.order);
   assertFaqLinks(locale, entries);
+  if (locale === 'en') assertEnglishSiteLinks('faq（en）', entries);
   return entries;
+}
+
+// 本文の中のリンク（[文言](URL) と [文言](URL "タイトル")）の URL を返す。
+const MARKDOWN_LINK = /\]\(\s*<?([^)\s>]+)>?(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g;
+function markdownLinks(body: string | undefined): string[] {
+  return [...(body ?? '').matchAll(MARKDOWN_LINK)].map(([, url]) => url);
+}
+
+// このサイトの中を指すリンクなら、そのパス（/faq#x など）を返す。外部サイト・mailto: などは null。
+// /support のような書き方と、https://legal.unpla.app/support のような書き方（astro.config の site）の両方を見る。
+const SITE_ORIGIN = new URL(import.meta.env.SITE).origin;
+function sitePath(url: string): string | null {
+  if (url.startsWith('#')) return null;
+  const resolved = new URL(url, `${SITE_ORIGIN}/`);
+  return resolved.origin === SITE_ORIGIN ? `${resolved.pathname}${resolved.hash}` : null;
+}
+
+// 英語の本文（FAQ・規約・PP）から、サイトの中の日本語のページへリンクしていないことを確かめる
+// （翻訳のとき、日本語の /support などをそのまま写す誤りを防ぐ）。サイトの中へのリンクは /en/ から始める。
+// 日本語にしかない特商法の表示（/tokushoho）は除く。反するとビルドを止める。
+export function assertEnglishSiteLinks(label: string, entries: { id: string; body?: string }[]): void {
+  const errors: string[] = [];
+  for (const entry of entries) {
+    for (const url of markdownLinks(entry.body)) {
+      const path = sitePath(url);
+      if (path && !/^\/en(?:[/#]|$)/.test(path) && !/^\/tokushoho(?:[/#]|$)/.test(path)) {
+        errors.push(`${entry.id} が日本語のページ ${url} にリンクしています（英語のページ /en/… にしてください）`);
+      }
+    }
+  }
+  if (errors.length > 0) {
+    throw new Error(`${label}: 英語の本文に日本語のページへのリンクがあります。\n- ${errors.join('\n- ')}`);
+  }
 }
 
 // 回答の中の、ほかの質問へのリンクを確かめる。次に反するとビルドを止める。
@@ -171,18 +206,22 @@ export async function getFaqs(locale: Locale = DEFAULT_LOCALE): Promise<FaqEntry
 //      ページの URL を書くと、言語の違うページへ飛ぶ書き間違いが起きる）。
 //   2. リンク先が、同じページに出る質問にある（英語は訳した質問だけを出すので、
 //      リンク先が未訳・下書きだと行き先の無いリンクになる）。
-// リンクにタイトルを付けた形（[文言](#<id> "タイトル")）も確かめる。
-const MARKDOWN_LINK = /\]\(\s*<?([^)\s>]+)>?(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g;
-const FAQ_PAGE_LINK = /^(?:https?:\/\/[^/]+)?(?:\/en)?\/faq\/?(?:#|$)/;
+//      公開している質問からは、公開している質問にだけリンクできる（開発サーバで下書きが出ていても同じ。
+//      本番ビルドで初めて止まることがないようにする）。下書きの質問からは、下書きにもリンクできる。
 export function assertFaqLinks(locale: Locale, entries: FaqEntry[]): void {
-  const ids = new Set(entries.map((e) => e.id));
+  const shownIds = new Set(entries.map((e) => e.id));
+  const publishedIds = new Set(entries.filter((e) => e.data.status === 'published').map((e) => e.id));
   const errors: string[] = [];
   for (const entry of entries) {
-    for (const [, url] of (entry.body ?? '').matchAll(MARKDOWN_LINK)) {
-      if (FAQ_PAGE_LINK.test(url)) {
+    const targets = entry.data.status === 'published' ? publishedIds : shownIds;
+    for (const url of markdownLinks(entry.body)) {
+      const path = sitePath(url);
+      if (path && /^(?:\/en)?\/faq\/?(?:#|$)/.test(path)) {
         errors.push(`${entry.id} の回答が ${url} にリンクしています。ほかの質問へは (#<id>) の形でリンクしてください`);
-      } else if (url.startsWith('#') && !ids.has(url.slice(1))) {
-        errors.push(`${entry.id} の回答が ${url} にリンクしていますが、その質問はこのページに出ません`);
+      } else if (url.startsWith('#') && !targets.has(url.slice(1))) {
+        errors.push(
+          `${entry.id} の回答が ${url} にリンクしていますが、その質問はこのページに${entry.data.status === 'published' ? '公開されていません' : '出ません'}`,
+        );
       }
     }
   }
