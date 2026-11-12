@@ -74,11 +74,12 @@ const japaneseOnly = locale === 'en' ? await getJapaneseOnlyVersions(kind) : [];
           )
         }
         {
-          // 日本語が正本で、英語は参考訳。英語の規約・PP には、どの版にも冒頭にこの注記を出す。
-          t.translationNotice && alternatePath && (
+          // 日本語が正本で、英語は参考訳。英語の規約・PP には、どの版にも冒頭にこの注記を必ず出す
+          // （リンク先を作れるかどうかに左右させない）。リンク先は日本語の同じ版。
+          t.translationNotice && (
             <aside class="notice translation" role="note">
               {t.translationNotice.before}
-              <a href={alternatePath} hreflang="ja">
+              <a href={alternatePath ?? versionPath(kind, version, 'ja')} hreflang="ja">
                 {t.translationNotice.link}
               </a>
               {t.translationNotice.after}

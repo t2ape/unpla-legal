@@ -166,20 +166,28 @@ export async function getFaqs(locale: Locale = DEFAULT_LOCALE): Promise<FaqEntry
   return entries;
 }
 
-// 回答の中の、ほかの質問へのリンク（[…](#<id>)）の行き先が、同じページに出る質問にあることを確かめる。
-// 英語は訳した質問だけを出すので、リンク先が未訳・下書きだと行き先の無いリンクになる。無ければビルドを止める。
+// 回答の中の、ほかの質問へのリンクを確かめる。次に反するとビルドを止める。
+//   1. ほかの質問へは [文言](#<id>) の形でリンクする（/faq#<id>・/en/faq#<id> と書かない。
+//      ページの URL を書くと、言語の違うページへ飛ぶ書き間違いが起きる）。
+//   2. リンク先が、同じページに出る質問にある（英語は訳した質問だけを出すので、
+//      リンク先が未訳・下書きだと行き先の無いリンクになる）。
+// リンクにタイトルを付けた形（[文言](#<id> "タイトル")）も確かめる。
+const MARKDOWN_LINK = /\]\(\s*<?([^)\s>]+)>?(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g;
+const FAQ_PAGE_LINK = /^(?:https?:\/\/[^/]+)?(?:\/en)?\/faq\/?(?:#|$)/;
 export function assertFaqLinks(locale: Locale, entries: FaqEntry[]): void {
   const ids = new Set(entries.map((e) => e.id));
   const errors: string[] = [];
   for (const entry of entries) {
-    for (const [, target] of (entry.body ?? '').matchAll(/\]\(#([^)\s]+)\)/g)) {
-      if (!ids.has(target)) {
-        errors.push(`${entry.id} の回答が #${target} にリンクしていますが、その質問はこのページに出ません`);
+    for (const [, url] of (entry.body ?? '').matchAll(MARKDOWN_LINK)) {
+      if (FAQ_PAGE_LINK.test(url)) {
+        errors.push(`${entry.id} の回答が ${url} にリンクしています。ほかの質問へは (#<id>) の形でリンクしてください`);
+      } else if (url.startsWith('#') && !ids.has(url.slice(1))) {
+        errors.push(`${entry.id} の回答が ${url} にリンクしていますが、その質問はこのページに出ません`);
       }
     }
   }
   if (errors.length > 0) {
-    throw new Error(`faq（${locale}）: 行き先の無いリンクがあります。\n- ${errors.join('\n- ')}`);
+    throw new Error(`faq（${locale}）: 質問どうしのリンクに誤りがあります。\n- ${errors.join('\n- ')}`);
   }
 }
 
