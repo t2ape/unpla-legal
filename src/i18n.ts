@@ -45,6 +45,11 @@ interface Strings {
     draftNotice: (version: number) => string;
     toc: string;
     history: string;
+    // 英語のページにだけ出す文言（日本語が正本なので、日本語のページには出さない）。
+    // 冒頭の参考訳の注記。link が日本語の同じ版へのリンクになる。
+    translationNotice?: { before: string; link: string; after: string };
+    // 改定履歴の下に添える、日本語にだけある過去版（英訳を作る前の版）の案内。
+    japaneseOnlyVersions?: string;
   };
   hub: {
     lead: string;
@@ -56,6 +61,8 @@ interface Strings {
   };
   faq: {
     title: string;
+    // 導入文。link がサポートのページへのリンクになる。
+    lead: { before: string; link: string; after: string };
     indexLabel: string;
     categories: Record<FaqCategory, string>;
   };
@@ -107,6 +114,11 @@ export const UI: Record<Locale, Strings> = {
     },
     faq: {
       title: 'よくある質問',
+      lead: {
+        before: 'アンプラクエスト（UnplaQuest）でよくいただくご質問をまとめています。解決しない場合は',
+        link: 'サポート',
+        after: 'までご連絡ください。',
+      },
       indexLabel: '質問の一覧',
       categories: {
         trouble: '困ったとき',
@@ -155,6 +167,13 @@ export const UI: Record<Locale, Strings> = {
         `This is a draft (Version ${version}). It is shown only on the development server and is not published.`,
       toc: 'Contents',
       history: 'Revision history',
+      translationNotice: {
+        before: 'This English translation is provided for reference only. The ',
+        link: 'Japanese version',
+        after:
+          ' is the official text. If there is any discrepancy between this translation and the Japanese version, the Japanese version prevails.',
+      },
+      japaneseOnlyVersions: 'Earlier versions are available in Japanese only:',
     },
     hub: {
       lead: 'The terms that apply when you use UnplaQuest, and how your information is handled.',
@@ -165,6 +184,11 @@ export const UI: Record<Locale, Strings> = {
     },
     faq: {
       title: 'Frequently Asked Questions',
+      lead: {
+        before: 'Answers to common questions about UnplaQuest. If these do not solve your problem, please contact ',
+        link: 'Support',
+        after: '.',
+      },
       indexLabel: 'List of questions',
       categories: {
         trouble: 'Troubleshooting',

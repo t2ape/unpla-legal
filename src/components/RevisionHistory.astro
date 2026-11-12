@@ -41,7 +41,7 @@ const t = UI[locale].legal;
   {
     japaneseOnly.length > 0 && (
       <p class="japanese-only">
-        Earlier versions are available in Japanese only:{' '}
+        {UI.en.legal.japaneseOnlyVersions}{' '}
         {japaneseOnly.map((entry, i) => (
           <>
             {i > 0 && ', '}

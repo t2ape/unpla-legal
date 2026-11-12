@@ -46,20 +46,7 @@ const supportPath = localePath(locale, PATHS.support);
     <header class="page-hero">
       <span class="eyebrow">FAQ</span>
       <h1>{t.faq.title}</h1>
-      {
-        locale === 'en' ? (
-          <p class="lead">
-            Answers to common questions about UnplaQuest. If these do not solve your problem, please contact{' '}
-            <a href={supportPath}>Support</a>.
-          </p>
-        ) : (
-          <p class="lead">
-            アンプラクエスト（UnplaQuest）でよくいただくご質問をまとめています。解決しない場合は<a
-              href={supportPath}>サポート</a
-            >までご連絡ください。
-          </p>
-        )
-      }
+      <p class="lead">{t.faq.lead.before}<a href={supportPath}>{t.faq.lead.link}</a>{t.faq.lead.after}</p>
     </header>
 
     <nav class="index" aria-label={t.faq.indexLabel}>

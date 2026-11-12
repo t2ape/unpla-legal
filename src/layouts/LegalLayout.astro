@@ -37,9 +37,11 @@ const alternatePath = !hasCounterpart
   : isAlias
     ? localePath(other, PATHS[kind])
     : versionPath(kind, version, other);
-// 英語の改定履歴に、日本語にだけある版（英訳を作る前の版）への案内を添える。
+// 英語の改定履歴に、日本語にだけある過去版（英訳を作る前の版）への案内を添える。
+// 英語のいちばん古い版より前の版だけにする（英訳がまだ無い新しい下書きを「過去版」として出さない）。
+const oldestVersion = Math.min(...entries.map((e) => e.data.version));
 const japaneseOnly =
-  locale === 'en' ? otherEntries.filter((o) => !entries.some((e) => e.data.version === o.data.version)) : [];
+  locale === 'en' ? otherEntries.filter((o) => o.data.version < oldestVersion) : [];
 ---
 
 <BaseLayout locale={locale} pageTitle={pageTitle} path={path} alternatePath={alternatePath}>
@@ -75,14 +77,13 @@ const japaneseOnly =
         }
         {
           // 日本語が正本で、英語は参考訳。英語の規約・PP には、どの版にも冒頭にこの注記を出す。
-          locale === 'en' && alternatePath && (
+          t.translationNotice && alternatePath && (
             <aside class="notice translation" role="note">
-              This English translation is provided for reference only. The{' '}
+              {t.translationNotice.before}
               <a href={alternatePath} hreflang="ja">
-                Japanese version
-              </a>{' '}
-              is the official text. If there is any discrepancy between this translation and the Japanese version,
-              the Japanese version prevails.
+                {t.translationNotice.link}
+              </a>
+              {t.translationNotice.after}
             </aside>
           )
         }

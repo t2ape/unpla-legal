@@ -25,9 +25,20 @@ const dateKey = (date: Date | undefined) => (date ? date.toISOString().slice(0, 
 //   2. 同じ版番号どうしは status と effectiveDate が同じ。
 //   3. 日本語の最新版（status: current）には英語の版がある
 //      （2 と合わせて、/terms と /en/terms は必ず同じ版を返す）。
+//   4. ファイル名が v{version}.md になっている（URL はファイル名から、リンクは版番号から作るので、
+//      ずれるとリンク切れになる）。
 // 日本語にだけある過去版（英訳を作る前の版）は認める。
 export function assertLocaleParity(kind: Kind, ja: LegalEntry[], en: LegalEntry[]): void {
   const errors: string[] = [];
+  for (const [dir, entries] of [[kind, ja], [`en/${kind}`, en]] as const) {
+    for (const entry of entries) {
+      if (entry.id !== `v${entry.data.version}`) {
+        errors.push(
+          `src/content/${dir}/${entry.id}.md の version は ${entry.data.version} です（ファイル名を v${entry.data.version}.md にするか、version を直してください）`,
+        );
+      }
+    }
+  }
   const jaByVersion = new Map(ja.map((e) => [e.data.version, e]));
   const enVersions = new Set(en.map((e) => e.data.version));
 
@@ -90,19 +101,40 @@ export async function getCommerce(): Promise<CollectionEntry<'commerce'> | null>
 // ファイルが無いあいだは読まない（ここでは有無を見るだけで、中身は読み込まない）。
 const HAS_EN_FAQ_FILES = Object.keys(import.meta.glob('../content/en/faq/*.md')).length > 0;
 
+// 英語の質問が日本語（正本）とそろっていることを確かめる。ずれていればビルドを止める。
+//   1. 日本語と同じファイル名（= アンカーの id）で置く。
+//   2. 分類が同じ。
+//   3. 英語を公開するなら、日本語も公開している（英訳が日本語より先に出ないようにする）。
+//      日本語は公開済みで英語は下書き（翻訳中）、は認める。
+export function assertFaqParity(ja: FaqEntry[], en: FaqEntry[]): void {
+  const errors: string[] = [];
+  const jaById = new Map(ja.map((e) => [e.id, e]));
+  for (const entry of en) {
+    const source = jaById.get(entry.id);
+    if (!source) {
+      errors.push(`英語の質問 ${entry.id} に対応する日本語の質問（src/content/faq/${entry.id}.md）がありません`);
+      continue;
+    }
+    if (source.data.category !== entry.data.category) {
+      errors.push(
+        `${entry.id} の category が食い違っています（日本語 ${source.data.category} / 英語 ${entry.data.category}）`,
+      );
+    }
+    if (entry.data.status === 'published' && source.data.status !== 'published') {
+      errors.push(`${entry.id} は英語だけ published です（日本語は ${source.data.status}）`);
+    }
+  }
+  if (errors.length > 0) {
+    throw new Error(`faq: 日本語と英語の質問がそろっていません。\n- ${errors.join('\n- ')}`);
+  }
+}
+
 // よくある質問。本番では下書きを除き、分類内の order 昇順で返す。
 // 英語は 0 件でもよい（そのあいだ /en/faq は作らず、英語のページからもリンクしない）。
 export async function getFaqs(locale: Locale = DEFAULT_LOCALE): Promise<FaqEntry[]> {
   const ja = await getCollection('faq');
   const en = HAS_EN_FAQ_FILES ? await getCollection('faqEn') : [];
-  // 英語の質問は、日本語と同じファイル名（= アンカーの id）で置く。
-  const jaIds = new Set(ja.map((e) => e.id));
-  const orphans = en.filter((e) => !jaIds.has(e.id)).map((e) => e.id);
-  if (orphans.length > 0) {
-    throw new Error(
-      `faq: 英語の質問は日本語と同じファイル名で置いてください（日本語に無い id: ${orphans.join(', ')}）`,
-    );
-  }
+  assertFaqParity(ja, en);
   const entries: FaqEntry[] = locale === 'en' ? en : ja;
   return entries
     .filter((e) => SHOW_DRAFTS || e.data.status === 'published')
