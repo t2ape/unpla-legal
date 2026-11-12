@@ -128,14 +128,14 @@ iOS の設定の項目名や階層（「設定 > スクリーンタイム > …�
 日本語（`src/content/`）と英語（`src/content/en/`）の両方で同じことをする。片方だけだとビルドが止まる。
 `/terms`・`/privacy` の URL は不変なので、アプリ／ストア登録 URL の変更は基本不要。
 
-### 下書きの版を公開する手順（例: プライバシーポリシー第3版）
+### 下書きの版を公開する手順
 
-プライバシーポリシー第3版（カリフォルニア州にお住まいのユーザーの権利の条を追加）は、日本語・英語とも `status: draft` で入っている（`src/content/privacy/v3.md`・`src/content/en/privacy/v3.md`）。`npm run dev` の `/privacy/v3`・`/en/privacy/v3` で確認できる。公開するときは次の順で行う。
+例として、プライバシーポリシーの下書き第N版（日本語・英語とも `status: draft`。`npm run dev` の `/privacy/vN`・`/en/privacy/vN` で確認できる）を公開するときは、次の順で行う。
 
-1. **効力発生日を決める。** 日本語と英語の `v3.md` のフロントマターに、同じ日付で `effectiveDate: YYYY-MM-DD` の行を足す（下書きのあいだの説明のコメント行は消す）。
-2. **status を切り替える。** 日本語と英語の `v3.md` を `status: current` に、日本語と英語の `v2.md` を `status: past` にする（4 ファイル）。
-3. **確かめる。** `npm run check` と `npm run build` を通す。`dist/` に `/privacy/v3`・`/en/privacy/v3` が出て、`/privacy`・`/en/privacy` が第3版を返し、`/privacy/v2`・`/en/privacy/v2` が過去版として残ることを見る。日付の入れ忘れ・`past` への直し忘れ・日英の食い違いは、ビルドが止まって分かる。
+1. **効力発生日を決める。** 日本語と英語の `vN.md` のフロントマターに、同じ日付で `effectiveDate: YYYY-MM-DD` の行を足す（下書きのあいだの説明のコメント行があれば消す）。
+2. **status を切り替える。** 日本語と英語の `vN.md` を `status: current` に、日本語と英語の前の版を `status: past` にする（4 ファイル）。
+3. **確かめる。** `npm run check` と `npm run build` を通す。`dist/` に `/privacy/vN`・`/en/privacy/vN` が出て、`/privacy`・`/en/privacy` が第N版を返し、前の版が過去版として残ることを見る。日付の入れ忘れ・`past` への直し忘れ・日英の食い違いは、ビルドが止まって分かる。
 4. **PR → `main` にマージ**（自動デプロイ）。公開されたことを実サイトで確かめる。
-5. **アプリ側 DB の版を上げる。** `legal_documents` のプライバシーポリシーの `current_version` を 3 にする（アプリのリポジトリの migration）。これでアプリが再同意を求める。サイトの公開より先に上げない（同意を求める画面が、まだ無い版を指してしまう）。
+5. **アプリ側 DB の版を上げる。** `legal_documents` のプライバシーポリシーの `current_version` を N にする（アプリのリポジトリの migration）。これでアプリが再同意を求める。サイトの公開より先に上げない（同意を求める画面が、まだ無い版を指してしまう）。
 
-利用規約など、ほかの下書きの版を公開するときも同じ手順。
+利用規約の版を公開するときも同じ手順。
