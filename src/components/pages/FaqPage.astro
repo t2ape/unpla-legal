@@ -44,8 +44,7 @@ const supportPath = localePath(locale, PATHS.support);
 >
   <div class="container narrow">
     <header class="page-hero">
-      {/* 題の上の英字ラベルは日本語のページにだけ添える（英語では題と同じ語の繰り返しになる）。 */}
-      {locale === 'ja' && <span class="eyebrow">FAQ</span>}
+      {t.eyebrow && <span class="eyebrow">{t.eyebrow.faq}</span>}
       <h1>{t.faq.title}</h1>
       <p class="lead">{t.faq.lead.before}<a href={supportPath}>{t.faq.lead.link}</a>{t.faq.lead.after}</p>
     </header>

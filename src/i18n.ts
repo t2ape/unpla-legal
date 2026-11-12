@@ -33,9 +33,10 @@ interface Strings {
   nav: { terms: string; privacy: string; commerce?: string; faq: string; support: string };
   // 言語の切り替えリンク。切り替え先の言語の名前を、その言語で書く。
   switchTo: string;
+  // ページの題（とハブのカードの題）の上に小さく添える英字ラベル。日本語のページにだけ書く
+  // （英語のページでは題と同じ語の繰り返しになる。ヘッダーにも UnplaQuest と出ている）。
+  eyebrow?: Record<'terms' | 'privacy' | 'commerce' | 'faq' | 'support', string>;
   legal: {
-    // 見出しの上に小さく添えるラベル。
-    eyebrow: Record<Kind, string>;
     label: Record<Kind, string>;
     latest: string;
     draft: string;
@@ -95,8 +96,14 @@ export const UI: Record<Locale, Strings> = {
       support: 'サポート',
     },
     switchTo: 'English',
+    eyebrow: {
+      terms: 'Terms of Service',
+      privacy: 'Privacy Policy',
+      commerce: 'Commercial Disclosure',
+      faq: 'FAQ',
+      support: 'Support',
+    },
     legal: {
-      eyebrow: { terms: 'Terms of Service', privacy: 'Privacy Policy' },
       label: { terms: '利用規約', privacy: 'プライバシーポリシー' },
       latest: '最新版',
       draft: '下書き',
@@ -156,7 +163,6 @@ export const UI: Record<Locale, Strings> = {
     },
     switchTo: '日本語',
     legal: {
-      eyebrow: { terms: 'UnplaQuest', privacy: 'UnplaQuest' },
       label: { terms: 'Terms of Service', privacy: 'Privacy Policy' },
       latest: 'Latest',
       draft: 'Draft',

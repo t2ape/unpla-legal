@@ -22,8 +22,5 @@ export function versionPath(kind: Kind, version: number, locale: Locale = DEFAUL
   return `${localePath(locale, PATHS[kind])}/v${version}`;
 }
 
-// 特定商取引法に基づく表示の、見出しの上に添える英字ラベル。
-export const COMMERCE_EYEBROW = 'Commercial Disclosure';
-
 // お問い合わせ窓口。言語によらず同じ。
 export const SUPPORT_EMAIL = 'support@unpla.app';

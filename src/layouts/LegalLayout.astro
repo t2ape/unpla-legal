@@ -45,7 +45,7 @@ const japaneseOnly = locale === 'en' ? await getJapaneseOnlyVersions(kind) : [];
 <BaseLayout locale={locale} pageTitle={pageTitle} path={path} alternatePath={alternatePath}>
   <div class="container">
     <header class="page-hero">
-      <span class="eyebrow">{t.eyebrow[kind]}</span>
+      {UI[locale].eyebrow && <span class="eyebrow">{UI[locale].eyebrow[kind]}</span>}
       <h1>{title}</h1>
       <div class="meta-row">
         {status === 'current' && <span class="chip is-accent">{t.latest}</span>}

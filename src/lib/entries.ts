@@ -12,6 +12,13 @@ export type FaqEntry = CollectionEntry<'faq'> | CollectionEntry<'faqEn'>;
 // 下書きは開発サーバでだけ見せる。本番ビルドでは URL ごと生成しない。
 export const SHOW_DRAFTS = import.meta.env.DEV;
 
+// 読み込みと日英の確認を、本番ビルドでは 1 回だけ行って結果を使い回す（ページごとにやり直さない）。
+// 開発サーバでは、文面の書き換えがすぐ反映されるように、呼ばれるたびに読み直す。
+function once<T>(load: () => Promise<T>): () => Promise<T> {
+  let cached: Promise<T> | undefined;
+  return () => (import.meta.env.DEV ? load() : (cached ??= load()));
+}
+
 async function loadLegal(kind: Kind, locale: Locale): Promise<LegalEntry[]> {
   if (locale === 'en') return getCollection(kind === 'terms' ? 'termsEn' : 'privacyEn');
   return getCollection(kind);
@@ -85,22 +92,35 @@ function oldestEnglishVersion(en: LegalEntry[]): number {
   return Math.min(...en.map((e) => e.data.version));
 }
 
-// 英語の改定履歴の下に案内する、日本語にだけある過去版（英訳を作る前の版）を version 降順で返す。
-export async function getJapaneseOnlyVersions(kind: Kind): Promise<LegalEntry[]> {
-  const [ja, en] = await Promise.all([getVersions(kind, 'ja'), loadLegal(kind, 'en')]);
+// 公開対象の版（version 降順）を言語ごとに。日本語にだけある過去版（英訳を作る前の版）も添える。
+// 日英の確認は、どちらの言語のページを作るときにも効く（片方だけ直したビルドを通さない）。
+async function loadVersions(kind: Kind) {
+  const [ja, en] = await Promise.all([loadLegal(kind, 'ja'), loadLegal(kind, 'en')]);
+  assertLocaleParity(kind, ja, en);
+  const visible = (entries: LegalEntry[]) =>
+    entries
+      .filter((e) => SHOW_DRAFTS || e.data.status !== 'draft')
+      .sort((a, b) => b.data.version - a.data.version);
   const oldestEn = oldestEnglishVersion(en);
-  return ja.filter((e) => e.data.version < oldestEn);
+  return {
+    ja: visible(ja),
+    en: visible(en),
+    japaneseOnly: visible(ja).filter((e) => e.data.version < oldestEn),
+  };
 }
+const versionsOf: Record<Kind, () => ReturnType<typeof loadVersions>> = {
+  terms: once(() => loadVersions('terms')),
+  privacy: once(() => loadVersions('privacy')),
+};
 
 // 公開対象の版を version 降順で返す。
 export async function getVersions(kind: Kind, locale: Locale = DEFAULT_LOCALE): Promise<LegalEntry[]> {
-  const [ja, en] = await Promise.all([loadLegal(kind, 'ja'), loadLegal(kind, 'en')]);
-  // どちらの言語のページを作るときにも確かめる（片方だけ直したビルドを通さない）。
-  assertLocaleParity(kind, ja, en);
-  assertEnglishSiteLinks(`${kind}（en）`, en);
-  return (locale === 'en' ? en : ja)
-    .filter((e) => SHOW_DRAFTS || e.data.status !== 'draft')
-    .sort((a, b) => b.data.version - a.data.version);
+  return (await versionsOf[kind]())[locale];
+}
+
+// 英語の改定履歴の下に案内する、日本語にだけある過去版（英訳を作る前の版）を version 降順で返す。
+export async function getJapaneseOnlyVersions(kind: Kind): Promise<LegalEntry[]> {
+  return (await versionsOf[kind]()).japaneseOnly;
 }
 
 // /terms・/privacy が指す最新版。「最新版」の表示は status で出し分けるので、current はちょうど 1 つにする
@@ -122,15 +142,12 @@ export async function getCommerce(locale: Locale = DEFAULT_LOCALE): Promise<Coll
   return SHOW_DRAFTS || entry.data.status === 'published' ? entry : null;
 }
 
-// 英語の質問のファイルが 1 つでもあるか。0 件のコレクションを読むと Astro がページごとに警告を出すので、
-// ファイルが無いあいだは読まない（ここでは有無を見るだけで、中身は読み込まない）。
-const HAS_EN_FAQ_FILES = Object.keys(import.meta.glob('../content/en/faq/*.md')).length > 0;
-
 // 英語の質問が日本語（正本）とそろっていることを確かめる。ずれていればビルドを止める。
 //   1. 日本語と同じファイル名（= アンカーの id）で置く。
 //   2. 分類が同じ。
 //   3. 英語を公開するなら、日本語も公開している（英訳が日本語より先に出ないようにする）。
 //      日本語は公開済みで英語は下書き（翻訳中）、は認める。
+// 回答の中のリンク（ほかの質問へのリンクを含む）は、ビルドしたページで確かめる（src/integrations/check-links.ts）。
 export function assertFaqParity(ja: FaqEntry[], en: FaqEntry[]): void {
   const errors: string[] = [];
   const jaById = new Map(ja.map((e) => [e.id, e]));
@@ -154,80 +171,20 @@ export function assertFaqParity(ja: FaqEntry[], en: FaqEntry[]): void {
   }
 }
 
-// よくある質問。本番では下書きを除き、分類内の order 昇順で返す。
-// 英語は 0 件でもよい（そのあいだ /en/faq は作らず、英語のページからもリンクしない）。
-export async function getFaqs(locale: Locale = DEFAULT_LOCALE): Promise<FaqEntry[]> {
-  const ja = await getCollection('faq');
-  const en = HAS_EN_FAQ_FILES ? await getCollection('faqEn') : [];
+// よくある質問を言語ごとに。本番では下書きを除き、分類内の order 昇順。
+const faqsByLocale = once(async () => {
+  const [ja, en] = await Promise.all([getCollection('faq'), getCollection('faqEn')]);
   assertFaqParity(ja, en);
-  const entries: FaqEntry[] = (locale === 'en' ? en : ja)
-    .filter((e) => SHOW_DRAFTS || e.data.status === 'published')
-    .sort((a, b) => a.data.order - b.data.order);
-  assertFaqLinks(locale, entries);
-  if (locale === 'en') assertEnglishSiteLinks('faq（en）', entries);
-  return entries;
-}
+  const visible = (entries: FaqEntry[]) =>
+    entries
+      .filter((e) => SHOW_DRAFTS || e.data.status === 'published')
+      .sort((a, b) => a.data.order - b.data.order);
+  return { ja: visible(ja), en: visible(en) };
+});
 
-// 本文の中のリンク（[文言](URL) と [文言](URL "タイトル")）の URL を返す。
-const MARKDOWN_LINK = /\]\(\s*<?([^)\s>]+)>?(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g;
-function markdownLinks(body: string | undefined): string[] {
-  return [...(body ?? '').matchAll(MARKDOWN_LINK)].map(([, url]) => url);
-}
-
-// このサイトの中を指すリンクなら、そのパス（/faq#x など）を返す。外部サイト・mailto: などは null。
-// /support のような書き方と、https://legal.unpla.app/support のような書き方（astro.config の site）の両方を見る。
-const SITE_ORIGIN = new URL(import.meta.env.SITE).origin;
-function sitePath(url: string): string | null {
-  if (url.startsWith('#')) return null;
-  const resolved = new URL(url, `${SITE_ORIGIN}/`);
-  return resolved.origin === SITE_ORIGIN ? `${resolved.pathname}${resolved.hash}` : null;
-}
-
-// 英語の本文（FAQ・規約・PP）から、サイトの中の日本語のページへリンクしていないことを確かめる
-// （翻訳のとき、日本語の /support などをそのまま写す誤りを防ぐ）。サイトの中へのリンクは /en/ から始める。
-// 日本語にしかない特商法の表示（/tokushoho）は除く。反するとビルドを止める。
-export function assertEnglishSiteLinks(label: string, entries: { id: string; body?: string }[]): void {
-  const errors: string[] = [];
-  for (const entry of entries) {
-    for (const url of markdownLinks(entry.body)) {
-      const path = sitePath(url);
-      if (path && !/^\/en(?:[/#]|$)/.test(path) && !/^\/tokushoho(?:[/#]|$)/.test(path)) {
-        errors.push(`${entry.id} が日本語のページ ${url} にリンクしています（英語のページ /en/… にしてください）`);
-      }
-    }
-  }
-  if (errors.length > 0) {
-    throw new Error(`${label}: 英語の本文に日本語のページへのリンクがあります。\n- ${errors.join('\n- ')}`);
-  }
-}
-
-// 回答の中の、ほかの質問へのリンクを確かめる。次に反するとビルドを止める。
-//   1. ほかの質問へは [文言](#<id>) の形でリンクする（/faq#<id>・/en/faq#<id> と書かない。
-//      ページの URL を書くと、言語の違うページへ飛ぶ書き間違いが起きる）。
-//   2. リンク先が、同じページに出る質問にある（英語は訳した質問だけを出すので、
-//      リンク先が未訳・下書きだと行き先の無いリンクになる）。
-//      公開している質問からは、公開している質問にだけリンクできる（開発サーバで下書きが出ていても同じ。
-//      本番ビルドで初めて止まることがないようにする）。下書きの質問からは、下書きにもリンクできる。
-export function assertFaqLinks(locale: Locale, entries: FaqEntry[]): void {
-  const shownIds = new Set(entries.map((e) => e.id));
-  const publishedIds = new Set(entries.filter((e) => e.data.status === 'published').map((e) => e.id));
-  const errors: string[] = [];
-  for (const entry of entries) {
-    const targets = entry.data.status === 'published' ? publishedIds : shownIds;
-    for (const url of markdownLinks(entry.body)) {
-      const path = sitePath(url);
-      if (path && /^(?:\/en)?\/faq\/?(?:#|$)/.test(path)) {
-        errors.push(`${entry.id} の回答が ${url} にリンクしています。ほかの質問へは (#<id>) の形でリンクしてください`);
-      } else if (url.startsWith('#') && !targets.has(url.slice(1))) {
-        errors.push(
-          `${entry.id} の回答が ${url} にリンクしていますが、その質問はこのページに${entry.data.status === 'published' ? '公開されていません' : '出ません'}`,
-        );
-      }
-    }
-  }
-  if (errors.length > 0) {
-    throw new Error(`faq（${locale}）: 質問どうしのリンクに誤りがあります。\n- ${errors.join('\n- ')}`);
-  }
+// よくある質問。英語は 0 件でもよい（そのあいだ /en/faq は作らず、英語のページからもリンクしない）。
+export async function getFaqs(locale: Locale = DEFAULT_LOCALE): Promise<FaqEntry[]> {
+  return (await faqsByLocale())[locale];
 }
 
 // その言語のよくある質問のページ（/faq・/en/faq）を作るか。ページの生成とリンク（ナビ・ハブ・サポート・

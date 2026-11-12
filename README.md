@@ -39,7 +39,7 @@ UnplaQuest の法務ドキュメント（利用規約・プライバシーポリ
 ```sh
 npm install
 npm run dev      # http://localhost:4321
-npm run build    # dist/ を生成
+npm run build    # dist/ を生成（日英の確認とリンクの確認も走る）
 npm run preview  # ビルド結果をローカル確認
 ```
 
@@ -107,18 +107,27 @@ iOS の設定の項目名や階層（「設定 > スクリーンタイム > …�
   1. 日本語に同じファイル名の質問がある。
   2. `category` が日本語と同じ。
   3. 英語を `published` にするなら、日本語も `published`（日本語が公開済みで英語が `draft`＝翻訳中、は認める）。
-- 回答の中で別の質問へリンクするときは、`[…](#<id>)` の形で書き（`/faq#<id>`・`/en/faq#<id>` と書かない）、リンク先も同じ言語で公開しておく（公開している質問から下書きの質問へはリンクできない。開発サーバでも同じ）。どちらかに反すると `assertFaqLinks` がビルドを止める（日本語・英語とも）。
-- 英語の本文（FAQ・規約・PP）からサイトの中へリンクするときは `/en/…` にする（`/support` など日本語のページを写さない。特商法の表示 `/tokushoho` は除く）。反すると `assertEnglishSiteLinks` がビルドを止める。
+- 回答の中で別の質問へリンクするときは `[…](#<id>)` と書き、リンク先の質問も同じ言語で公開しておく（未訳・下書きの質問へのリンクは、下の「リンクの確認」で止まる）。
+
+### リンクの確認
+
+`npm run build` の最後に、出来上がったページ（`dist/**/*.html`）のサイトの中へのリンクをすべて確かめ、次に反するとビルドを止める（`src/integrations/check-links.ts`）。Markdown の書き方（`[x](url)`・`<url>`・参照形式・生の `<a>`・相対パス）によらず、ブラウザと同じ解決をした結果で見る。
+
+1. 行き先のページと、`#id` があればその id が実在する（未訳・下書きの質問、作っていない版へのリンクを止める）。
+2. もう一方の言語にも同じページがあるのに、そちらへリンクしない（英訳で日本語の `/support`・`https://legal.unpla.app/privacy` などを写したままにする誤りを止める。逆向きも同じ）。言語の切り替え・参考訳の注記など、わざと別の言語へ飛ばすリンクには、レイアウトの側で `hreflang` を付けてある。日本語にしかないページ（特商法の表示）へのリンクはかまわない。
+
+開発サーバ（`npm run dev`）では走らないので、PR の前に `npm run build` を通す（PR の CI でも走る）。
 - 分類の見出しの英語は `src/i18n.ts` の `UI.en.faq.categories`。
 - 回答は、アプリの**英語の**画面文言（ボタン名・設定名）と一字一句そろえる。
 
 ## リリースフロー
 
 このサイトは **`main` への push で自動デプロイ** される（`.github/workflows/deploy.yml`）。手動リリース作業は不要。
+PR では `.github/workflows/ci.yml` が `npm run check` と `npm run build` を走らせる（公開はしない）。日英の確認・リンクの確認はビルドの中で走るので、マージ前にここで止まる。
 
 1. **ブランチを切って作業** — `main` から作業ブランチを作成し、コンテンツ（`src/content/**`）やレイアウトを変更する。
 2. **ローカル確認** — `npm run build` でビルドが通ることを確認（型チェックは `npm run check`）。必要なら `npm run preview` で表示を確認する。
-3. **PR を作成 → レビュー → `main` にマージ**。
+3. **PR を作成 → CI が通ることを確かめる → レビュー → `main` にマージ**。
 4. **自動ビルド & デプロイ** — マージ（= `main` への push）をトリガーに GitHub Actions が起動する。
    - `build` ジョブ: `withastro/action@v3`（Node 22）で `npm ci → astro build`、`dist/` を Pages 用 artifact としてアップロード。
    - `deploy` ジョブ: `actions/deploy-pages@v4` で GitHub Pages へ公開。

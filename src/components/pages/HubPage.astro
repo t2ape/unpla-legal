@@ -3,7 +3,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCommerce, getVersions, hasFaqPage, pickCurrent } from '../../lib/entries';
 import { DEFAULT_LOCALE, otherLocale, UI, type Locale } from '../../i18n';
-import { COMMERCE_EYEBROW, localePath, PATHS } from '../../utils';
+import { localePath, PATHS } from '../../utils';
 
 interface Props {
   locale?: Locale;
@@ -25,13 +25,13 @@ const legalMeta = (entry: typeof terms) =>
 const cards = [
   {
     href: localePath(locale, PATHS.terms),
-    eyebrow: UI.ja.legal.eyebrow.terms,
+    eyebrow: t.eyebrow?.terms,
     title: terms.data.title,
     meta: legalMeta(terms),
   },
   {
     href: localePath(locale, PATHS.privacy),
-    eyebrow: UI.ja.legal.eyebrow.privacy,
+    eyebrow: t.eyebrow?.privacy,
     title: privacy.data.title,
     meta: legalMeta(privacy),
   },
@@ -39,7 +39,7 @@ const cards = [
     ? [
         {
           href: PATHS.commerce,
-          eyebrow: COMMERCE_EYEBROW,
+          eyebrow: t.eyebrow?.commerce,
           title: commerce.data.title,
           meta: t.hub.updated(commerce.data.updatedDate),
         },
@@ -49,7 +49,7 @@ const cards = [
     ? [
         {
           href: localePath(locale, PATHS.faq),
-          eyebrow: 'FAQ',
+          eyebrow: t.eyebrow?.faq,
           title: t.faq.title,
           meta: t.hub.faqMeta,
         },
@@ -57,15 +57,11 @@ const cards = [
     : []),
   {
     href: localePath(locale, PATHS.support),
-    eyebrow: 'Support',
+    eyebrow: t.eyebrow?.support,
     title: t.support.title,
     meta: t.hub.supportMeta,
   },
-].map((card) => ({
-  ...card,
-  // 題の上の英字ラベルは日本語のハブにだけ添える（英語のハブでは題と同じ語の繰り返しになる）。
-  eyebrow: locale === 'ja' ? card.eyebrow : undefined,
-}));
+];
 ---
 
 <BaseLayout
