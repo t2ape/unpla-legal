@@ -1,7 +1,9 @@
 // 言語ごとの文言と書式。日本語が正本で、英語は参考訳として /en/ 配下に出す。
 // レイアウト・部品・ページの文言はすべてここに置き、英語のページに日本語の文言を残さない。
 
-export type Locale = 'ja' | 'en';
+// サイトの言語。既定の言語（日本語）は URL の前に何も付けず、ほかの言語は /en のように付ける（src/utils.ts の localePath）。
+export const LOCALES = ['ja', 'en'] as const;
+export type Locale = (typeof LOCALES)[number];
 export type Kind = 'terms' | 'privacy';
 
 export const DEFAULT_LOCALE: Locale = 'ja';

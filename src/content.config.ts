@@ -50,16 +50,19 @@ const privacy = defineCollection({
   schema: legalSchema,
 });
 
-// 英語（参考訳）。src/content/en/ 配下に、日本語と同じファイル名で置く。
-// 日本語との版・状態・効力発生日の食い違いは src/lib/entries.ts で確かめ、ずれていればビルドを止める。
+// 英語（参考訳）。src/content/en/ 配下に、日本語と同じファイル名（vN.md）で置く。
+// 書くのは訳す題（title）と本文だけ。版番号・状態・効力発生日は日本語の同じ版のものを使う
+// （日英で食い違いようがないようにする。対応づけと確認は src/lib/entries.ts）。
+const legalEnSchema = z.object({ title: z.string() });
+
 const termsEn = defineCollection({
   loader: glob({ pattern: '*.md', base: './src/content/en/terms' }),
-  schema: legalSchema,
+  schema: legalEnSchema,
 });
 
 const privacyEn = defineCollection({
   loader: glob({ pattern: '*.md', base: './src/content/en/privacy' }),
-  schema: legalSchema,
+  schema: legalEnSchema,
 });
 
 // 特定商取引法に基づく表示。同意を取る書類ではないので版を持たず、
@@ -82,9 +85,11 @@ const faq = defineCollection({
 });
 
 // よくある質問の英語版。日本語と同じファイル名で置くと /en/faq#<id> に出る（0 件のあいだ /en/faq は作らない）。
+// 書くのは訳す質問文（question）と本文、英訳の状態（status）だけ。分類と並び順は日本語の同じ質問のものを使う。
+// status は日本語と別に持つ（日本語は公開済みで英訳は下書き＝翻訳中、ができるように）。
 const faqEn = defineCollection({
   loader: glob({ pattern: '*.md', base: './src/content/en/faq' }),
-  schema: faqSchema,
+  schema: faqSchema.pick({ question: true, status: true }),
 });
 
 export const collections = { terms, privacy, termsEn, privacyEn, commerce, faq, faqEn };

@@ -1,7 +1,5 @@
 ---
 question: I cannot remove a block
-category: trouble
-order: 1
 status: published
 ---
 

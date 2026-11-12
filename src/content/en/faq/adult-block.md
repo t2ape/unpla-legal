@@ -1,7 +1,5 @@
 ---
 question: What is "Adult site blocking" in a block list?
-category: feature
-order: 1
 status: published
 ---
 

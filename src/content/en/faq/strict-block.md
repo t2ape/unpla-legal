@@ -1,7 +1,5 @@
 ---
 question: I want stricter blocking
-category: strict
-order: 1
 status: published
 ---
 

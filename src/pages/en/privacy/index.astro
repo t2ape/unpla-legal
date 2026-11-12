@@ -1,12 +1,11 @@
 ---
-import { render } from 'astro:content';
 import LegalLayout from '../../../layouts/LegalLayout.astro';
-import { getVersions, pickCurrent } from '../../../lib/entries';
+import { getVersions, pickCurrent, renderEntry } from '../../../lib/entries';
 
 // 常に最新版（status: current）を返すエイリアス。
 const entries = await getVersions('privacy', 'en');
 const current = pickCurrent(entries);
-const { Content, headings } = await render(current);
+const { Content, headings } = await renderEntry(current);
 ---
 
 <LegalLayout kind="privacy" locale="en" entry={current} entries={entries} headings={headings} isAlias={true}>

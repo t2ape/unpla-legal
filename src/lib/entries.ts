@@ -1,78 +1,84 @@
-import { getCollection, type CollectionEntry } from 'astro:content';
+import { getCollection, render, type CollectionEntry } from 'astro:content';
 import { DEFAULT_LOCALE, type Kind, type Locale } from '../i18n';
 
 export type { Kind } from '../i18n';
-export type LegalEntry =
-  | CollectionEntry<'terms'>
-  | CollectionEntry<'privacy'>
-  | CollectionEntry<'termsEn'>
-  | CollectionEntry<'privacyEn'>;
-export type FaqEntry = CollectionEntry<'faq'> | CollectionEntry<'faqEn'>;
+
+// 英語のファイルには訳す項目（題・質問文・本文）と英訳の状態だけを書き、ほかの項目は日本語の同じ版・同じ質問の
+// ものを使う（src/content.config.ts）。ここで日本語の項目と合わせた形に作り直して、日英とも同じ形で返す。
+type JaLegal = CollectionEntry<'terms'> | CollectionEntry<'privacy'>;
+type EnLegal = CollectionEntry<'termsEn'> | CollectionEntry<'privacyEn'>;
+export type LegalEntry = JaLegal | (Omit<EnLegal, 'data'> & { data: JaLegal['data'] });
+type EnFaq = CollectionEntry<'faqEn'>;
+export type FaqEntry = CollectionEntry<'faq'> | (Omit<EnFaq, 'data'> & { data: CollectionEntry<'faq'>['data'] });
+
+// 本文を描画する。英語の版・質問は data を作り直しているので、render の型（コレクションごとの data の形）
+// には合わない。描画に使うのは id・collection・本文だけで、data は使わないので、そのまま渡す。
+export function renderEntry(entry: LegalEntry | FaqEntry) {
+  return render(entry as unknown as Parameters<typeof render>[0]);
+}
 
 // 下書きは開発サーバでだけ見せる。本番ビルドでは URL ごと生成しない。
 export const SHOW_DRAFTS = import.meta.env.DEV;
 
-// 読み込みと日英の確認を、本番ビルドでは 1 回だけ行って結果を使い回す（ページごとにやり直さない）。
+// 読み込みと確認を、本番ビルドでは 1 回だけ行って結果を使い回す（ページごとにやり直さない）。
 // 開発サーバでは、文面の書き換えがすぐ反映されるように、呼ばれるたびに読み直す。
 function once<T>(load: () => Promise<T>): () => Promise<T> {
   let cached: Promise<T> | undefined;
   return () => (import.meta.env.DEV ? load() : (cached ??= load()));
 }
 
-async function loadLegal(kind: Kind, locale: Locale): Promise<LegalEntry[]> {
-  if (locale === 'en') return getCollection(kind === 'terms' ? 'termsEn' : 'privacyEn');
-  return getCollection(kind);
+function fail(label: string, errors: string[]): void {
+  if (errors.length > 0) throw new Error(`${label}\n- ${errors.join('\n- ')}`);
 }
 
-const dateKey = (date: Date | undefined) => (date ? date.toISOString().slice(0, 10) : '未定');
+const dateKey = (date: Date) => date.toISOString().slice(0, 10);
 
-// 日本語（正本）と英語（参考訳）の版がそろっていることを確かめる。ずれていればビルドを止める。
-// 下書きも含めて見るので、公開前の PR の時点で気づける。
-//   1. 英語の版には、同じ版番号の日本語の版がある（英語だけの版は作れない）。
-//   2. 同じ版番号どうしは status と effectiveDate が同じ。
-//   3. 日本語の最新版（status: current）には英語の版がある
-//      （2 と合わせて、/terms と /en/terms は必ず同じ版を返す）。
-//   4. ファイル名が v{version}.md になっている（URL はファイル名から、リンクは版番号から作るので、
-//      ずれるとリンク切れになる）。
-//   5. 英語のいちばん古い版より新しい日本語の版には、英語の版がある（下書きを除く）。
+// 日本時間の今日（YYYY-MM-DD）。効力発生日と比べる。
+const todayInJapan = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' }).format(new Date());
+
+async function loadLegal(kind: Kind): Promise<{ ja: JaLegal[]; en: EnLegal[] }> {
+  const [ja, en] = await Promise.all([
+    getCollection(kind) as Promise<JaLegal[]>,
+    getCollection(kind === 'terms' ? 'termsEn' : 'privacyEn') as Promise<EnLegal[]>,
+  ]);
+  return { ja, en };
+}
+
+// 規約・PP の版を確かめる。反するとビルドを止める（下書きも含めて見るので、公開前の PR の時点で気づける）。
+//   1. 日本語のファイル名が v{version}.md になっている（URL はファイル名から、リンクは版番号から作るので、
+//      ずれるとリンク切れになる）。英語は版番号を持たず、ファイル名で日本語の版と対応づける。
+//   2. 英語の版には、同じファイル名の日本語の版がある（英語だけの版は作れない）。
+//   3. 日本語の最新版（status: current）には英語の版がある（英語は状態を日本語から受け継ぐので、
+//      /terms と /en/terms は必ず同じ版を返す）。
+//   4. 英語のいちばん古い版より新しい日本語の版（下書きを除く）には、英語の版がある。
 //      英語の改定履歴は、英語の版と「英語のいちばん古い版より前の、日本語にだけある版」を並べるので、
 //      あいだに抜けがあると、その版が英語のページから辿れなくなる。
-// 日本語にだけある過去版（英訳を作る前の版）は、英語のいちばん古い版より前のものだけ認める。
+//   5. 本番ビルドでは、公開する版（current・past）の効力発生日が、日本時間の今日を過ぎていない。
+//      このサイトは「最新版＝効力のある版」として出すので、効力発生日より前に公開すると、まだ効力の無い版が
+//      最新版に、効力のある版が過去版に見えてしまう。改定は効力発生日の当日以降にマージする。
 // 日本語の下書きは、英訳より先に置いてよい。
-export function assertLocaleParity(kind: Kind, ja: LegalEntry[], en: LegalEntry[]): void {
+function assertVersions(kind: Kind, ja: JaLegal[], en: EnLegal[]): void {
   const errors: string[] = [];
-  for (const [dir, entries] of [[kind, ja], [`en/${kind}`, en]] as const) {
-    for (const entry of entries) {
-      if (entry.id !== `v${entry.data.version}`) {
-        errors.push(
-          `src/content/${dir}/${entry.id}.md の version は ${entry.data.version} です（ファイル名を v${entry.data.version}.md にするか、version を直してください）`,
-        );
-      }
-    }
-  }
-  const jaByVersion = new Map(ja.map((e) => [e.data.version, e]));
-  const enVersions = new Set(en.map((e) => e.data.version));
-
-  for (const entry of en) {
-    const { version, status, effectiveDate } = entry.data;
-    const source = jaByVersion.get(version);
-    if (!source) {
-      errors.push(`英語の第${version}版に対応する日本語の版（src/content/${kind}/v${version}.md）がありません`);
-      continue;
-    }
-    if (source.data.status !== status) {
-      errors.push(`第${version}版の status が食い違っています（日本語 ${source.data.status} / 英語 ${status}）`);
-    }
-    if (dateKey(source.data.effectiveDate) !== dateKey(effectiveDate)) {
+  for (const entry of ja) {
+    if (entry.id !== `v${entry.data.version}`) {
       errors.push(
-        `第${version}版の effectiveDate が食い違っています（日本語 ${dateKey(source.data.effectiveDate)} / 英語 ${dateKey(effectiveDate)}）`,
+        `src/content/${kind}/${entry.id}.md の version は ${entry.data.version} です（ファイル名を v${entry.data.version}.md にするか、version を直してください）`,
       );
     }
   }
-  const oldestEn = oldestEnglishVersion(en);
+  const jaIds = new Set(ja.map((e) => e.id));
+  for (const entry of en) {
+    if (!jaIds.has(entry.id)) {
+      errors.push(
+        `英語の src/content/en/${kind}/${entry.id}.md に対応する日本語の版（src/content/${kind}/${entry.id}.md）がありません`,
+      );
+    }
+  }
+  const enIds = new Set(en.map((e) => e.id));
+  const oldestEn = Math.min(...ja.filter((e) => enIds.has(e.id)).map((e) => e.data.version));
   for (const entry of ja) {
     const { version, status } = entry.data;
-    if (enVersions.has(version)) continue;
+    if (enIds.has(entry.id)) continue;
     if (status === 'current') {
       errors.push(`日本語の最新版（第${version}版）の英語版（src/content/en/${kind}/v${version}.md）がありません`);
     } else if (status === 'past' && version > oldestEn) {
@@ -81,30 +87,33 @@ export function assertLocaleParity(kind: Kind, ja: LegalEntry[], en: LegalEntry[
       );
     }
   }
-  if (errors.length > 0) {
-    throw new Error(`${kind}: 日本語と英語の版がそろっていません。\n- ${errors.join('\n- ')}`);
+  if (!SHOW_DRAFTS) {
+    const today = todayInJapan();
+    for (const { data } of ja) {
+      if (data.status !== 'draft' && dateKey(data.effectiveDate) > today) {
+        errors.push(
+          `第${data.version}版（${data.status}）の効力発生日 ${dateKey(data.effectiveDate)} がまだ来ていません（日本時間の今日は ${today}）。効力発生日の当日以降に公開（マージ）してください`,
+        );
+      }
+    }
   }
-}
-
-// 英語のいちばん古い版。これより前の版だけを「日本語にだけある過去版」として認める（assertLocaleParity の 5）。
-// 下書きも含めて数える（版の確認と、英語の改定履歴の案内とで同じ値を使う）。
-function oldestEnglishVersion(en: LegalEntry[]): number {
-  return Math.min(...en.map((e) => e.data.version));
+  fail(`${kind}: 版の誤りがあります。`, errors);
 }
 
 // 公開対象の版（version 降順）を言語ごとに。日本語にだけある過去版（英訳を作る前の版）も添える。
-// 日英の確認は、どちらの言語のページを作るときにも効く（片方だけ直したビルドを通さない）。
 async function loadVersions(kind: Kind) {
-  const [ja, en] = await Promise.all([loadLegal(kind, 'ja'), loadLegal(kind, 'en')]);
-  assertLocaleParity(kind, ja, en);
+  const { ja, en } = await loadLegal(kind);
+  assertVersions(kind, ja, en);
+  const jaById = new Map(ja.map((e) => [e.id, e]));
+  const enMerged: LegalEntry[] = en.map((e) => ({ ...e, data: { ...jaById.get(e.id)!.data, title: e.data.title } }));
   const visible = (entries: LegalEntry[]) =>
     entries
       .filter((e) => SHOW_DRAFTS || e.data.status !== 'draft')
       .sort((a, b) => b.data.version - a.data.version);
-  const oldestEn = oldestEnglishVersion(en);
+  const oldestEn = Math.min(...enMerged.map((e) => e.data.version));
   return {
     ja: visible(ja),
-    en: visible(en),
+    en: visible(enMerged),
     japaneseOnly: visible(ja).filter((e) => e.data.version < oldestEn),
   };
 }
@@ -142,44 +151,37 @@ export async function getCommerce(locale: Locale = DEFAULT_LOCALE): Promise<Coll
   return SHOW_DRAFTS || entry.data.status === 'published' ? entry : null;
 }
 
-// 英語の質問が日本語（正本）とそろっていることを確かめる。ずれていればビルドを止める。
+// 英語の質問を確かめる。反するとビルドを止める。
 //   1. 日本語と同じファイル名（= アンカーの id）で置く。
-//   2. 分類が同じ。
-//   3. 英語を公開するなら、日本語も公開している（英訳が日本語より先に出ないようにする）。
+//   2. 英語を公開するなら、日本語も公開している（英訳が日本語より先に出ないようにする）。
 //      日本語は公開済みで英語は下書き（翻訳中）、は認める。
+// 分類と並び順は日本語のものを使うので、食い違いようがない。
 // 回答の中のリンク（ほかの質問へのリンクを含む）は、ビルドしたページで確かめる（src/integrations/check-links.ts）。
-export function assertFaqParity(ja: FaqEntry[], en: FaqEntry[]): void {
+function assertFaqs(ja: CollectionEntry<'faq'>[], en: EnFaq[]): void {
   const errors: string[] = [];
   const jaById = new Map(ja.map((e) => [e.id, e]));
   for (const entry of en) {
     const source = jaById.get(entry.id);
     if (!source) {
       errors.push(`英語の質問 ${entry.id} に対応する日本語の質問（src/content/faq/${entry.id}.md）がありません`);
-      continue;
-    }
-    if (source.data.category !== entry.data.category) {
-      errors.push(
-        `${entry.id} の category が食い違っています（日本語 ${source.data.category} / 英語 ${entry.data.category}）`,
-      );
-    }
-    if (entry.data.status === 'published' && source.data.status !== 'published') {
+    } else if (entry.data.status === 'published' && source.data.status !== 'published') {
       errors.push(`${entry.id} は英語だけ published です（日本語は ${source.data.status}）`);
     }
   }
-  if (errors.length > 0) {
-    throw new Error(`faq: 日本語と英語の質問がそろっていません。\n- ${errors.join('\n- ')}`);
-  }
+  fail('faq: 英語の質問に誤りがあります。', errors);
 }
 
 // よくある質問を言語ごとに。本番では下書きを除き、分類内の order 昇順。
 const faqsByLocale = once(async () => {
   const [ja, en] = await Promise.all([getCollection('faq'), getCollection('faqEn')]);
-  assertFaqParity(ja, en);
+  assertFaqs(ja, en);
+  const jaById = new Map(ja.map((e) => [e.id, e]));
+  const enMerged: FaqEntry[] = en.map((e) => ({ ...e, data: { ...jaById.get(e.id)!.data, ...e.data } }));
   const visible = (entries: FaqEntry[]) =>
     entries
       .filter((e) => SHOW_DRAFTS || e.data.status === 'published')
       .sort((a, b) => a.data.order - b.data.order);
-  return { ja: visible(ja), en: visible(en) };
+  return { ja: visible(ja), en: visible(enMerged) };
 });
 
 // よくある質問。英語は 0 件でもよい（そのあいだ /en/faq は作らず、英語のページからもリンクしない）。

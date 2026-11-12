@@ -1,7 +1,5 @@
 ---
 question: Can I use it on more than one device?
-category: account
-order: 1
 status: published
 ---
 

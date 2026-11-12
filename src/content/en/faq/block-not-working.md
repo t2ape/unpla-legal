@@ -1,7 +1,5 @@
 ---
 question: A block does not work, or will not come off
-category: trouble
-order: 2
 status: published
 ---
 
