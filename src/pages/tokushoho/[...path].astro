@@ -3,7 +3,8 @@ import type { GetStaticPaths } from 'astro';
 import { render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCommerce } from '../../lib/entries';
-import { COMMERCE_EYEBROW, formatDate, PATHS } from '../../utils';
+import { UI } from '../../i18n';
+import { PATHS } from '../../utils';
 
 // 特定商取引法に基づく表示（/tokushoho）。本文は src/content/commerce/index.md。
 // 下書きの間は本番ビルドでページを生成しないため、生成数を 0 にできる動的ルートにしている
@@ -15,24 +16,26 @@ export const getStaticPaths = (async () => {
 
 const { entry } = Astro.props;
 const { title, updatedDate, status } = entry.data;
+// 日本向けの表示なので、日本語の文言だけを使う。
+const t = UI.ja;
 const { Content } = await render(entry);
 ---
 
 <BaseLayout pageTitle={title} path={PATHS.commerce}>
   <div class="container">
     <header class="page-hero">
-      <span class="eyebrow">{COMMERCE_EYEBROW}</span>
+      {t.eyebrow && <span class="eyebrow">{t.eyebrow.commerce}</span>}
       <h1>{title}</h1>
       <div class="meta-row">
-        {status === 'draft' && <span class="chip is-warning">下書き</span>}
-        <span class="chip">最終更新日 {formatDate(updatedDate)}</span>
+        {status === 'draft' && <span class="chip is-warning">{t.legal.draft}</span>}
+        <span class="chip">{t.hub.updated(updatedDate)}</span>
       </div>
     </header>
 
     {
       status === 'draft' && (
         <aside class="notice draft" role="note">
-          下書きです。開発サーバでだけ表示され、本番には公開されません。
+          {t.legal.draftNotice()}
         </aside>
       )
     }

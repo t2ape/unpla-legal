@@ -1,0 +1,168 @@
+---
+// リンクハブ（/ と /en/）：各ドキュメントの最新版へ誘導する。
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCommerce, getVersions, pickCurrent } from '../../lib/entries';
+import { DEFAULT_LOCALE, otherLocale, UI, type Locale } from '../../i18n';
+import { localePath, PATHS } from '../../utils';
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const t = UI[locale];
+
+const terms = pickCurrent(await getVersions('terms', locale));
+const privacy = pickCurrent(await getVersions('privacy', locale));
+// 特商法の表示は日本向けなので、日本語のハブにだけ出す。
+const commerce = await getCommerce(locale);
+
+const legalMeta = (entry: typeof terms) =>
+  `${t.legal.version(entry.data.version)}${t.hub.metaSeparator}${t.legal.effective(entry.data.effectiveDate)}`;
+
+const cards = [
+  {
+    href: localePath(locale, PATHS.terms),
+    eyebrow: t.eyebrow?.terms,
+    title: terms.data.title,
+    meta: legalMeta(terms),
+  },
+  {
+    href: localePath(locale, PATHS.privacy),
+    eyebrow: t.eyebrow?.privacy,
+    title: privacy.data.title,
+    meta: legalMeta(privacy),
+  },
+  ...(commerce
+    ? [
+        {
+          href: PATHS.commerce,
+          eyebrow: t.eyebrow?.commerce,
+          title: commerce.data.title,
+          meta: t.hub.updated(commerce.data.updatedDate),
+        },
+      ]
+    : []),
+  {
+    href: localePath(locale, PATHS.faq),
+    eyebrow: t.eyebrow?.faq,
+    title: t.faq.title,
+    meta: t.hub.faqMeta,
+  },
+  {
+    href: localePath(locale, PATHS.support),
+    eyebrow: t.eyebrow?.support,
+    title: t.support.title,
+    meta: t.hub.supportMeta,
+  },
+];
+---
+
+<BaseLayout
+  locale={locale}
+  path={localePath(locale, PATHS.home)}
+  alternatePath={localePath(otherLocale(locale), PATHS.home)}
+>
+  <div class="container">
+    <header class="page-hero hub-hero">
+      <h1>{t.siteTitle}</h1>
+      <p class="lead">{t.hub.lead}</p>
+    </header>
+
+    <ul class="cards">
+      {
+        cards.map((card) => (
+          <li>
+            <a class="card" href={card.href}>
+              <span class="card-body">
+                {card.eyebrow && <span class="card-eyebrow">{card.eyebrow}</span>}
+                <span class="card-title">{card.title}</span>
+                <span class="card-meta">{card.meta}</span>
+              </span>
+              <span class="card-arrow" aria-hidden="true">→</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</BaseLayout>
+
+<style>
+  .hub-hero {
+    padding-top: 4rem;
+  }
+  .cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
+    max-width: 42rem;
+  }
+  .card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    height: 100%;
+    padding: 1.35rem 1.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    text-decoration: none;
+    box-shadow: var(--shadow);
+    transition:
+      transform 0.2s ease,
+      border-color 0.2s ease;
+  }
+  .card:hover {
+    color: var(--text);
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+  }
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+    min-width: 0;
+  }
+  .card-eyebrow {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .card-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.1rem;
+    line-height: 1.5;
+  }
+  .card-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  .card-arrow {
+    color: var(--text-faint);
+    transition:
+      transform 0.2s ease,
+      color 0.2s ease;
+  }
+  .card:hover .card-arrow {
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card,
+    .card-arrow {
+      transition: none;
+    }
+    .card:hover,
+    .card:hover .card-arrow {
+      transform: none;
+    }
+  }
+</style>

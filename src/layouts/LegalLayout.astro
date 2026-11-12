@@ -3,11 +3,14 @@ import type { MarkdownHeading } from 'astro';
 import BaseLayout from './BaseLayout.astro';
 import RevisionHistory from '../components/RevisionHistory.astro';
 import TableOfContents from '../components/TableOfContents.astro';
-import type { Kind, LegalEntry } from '../lib/entries';
-import { formatDate, KIND_EYEBROW, PATHS, versionPath } from '../utils';
+import { getJapaneseOnlyVersions, getVersions, type Kind, type LegalEntry } from '../lib/entries';
+import { DEFAULT_LOCALE, otherLocale, UI, type Locale } from '../i18n';
+import { localePath, PATHS, versionPath } from '../utils';
 
 interface Props {
   kind: Kind;
+  // ページの言語。entry・entries はこの言語のものを渡す。
+  locale?: Locale;
   // 表示中の版。
   entry: LegalEntry;
   // 公開対象の全版（version 降順）。改定履歴に使う。
@@ -18,22 +21,37 @@ interface Props {
   isAlias: boolean;
 }
 
-const { kind, entry, entries, headings, isAlias } = Astro.props;
+const { kind, locale = DEFAULT_LOCALE, entry, entries, headings, isAlias } = Astro.props;
+const t = UI[locale].legal;
 const { title, version, effectiveDate, status } = entry.data;
-const pageTitle = isAlias ? title : `${title}（第${version}版）`;
-const path = isAlias ? PATHS[kind] : versionPath(kind, version);
+const pastNotice = t.pastNotice(version);
+const pageTitle = isAlias ? title : t.titleWithVersion(title, version);
+const path = isAlias ? localePath(locale, PATHS[kind]) : versionPath(kind, version, locale);
+
+// もう一方の言語の同じ版。最新版エイリアスどうしは必ず同じ版を返す（版の対応は getVersions が確かめている）。
+// 英訳の無い版のように相手に同じ版が無いときは、対応なしにする。
+const other = otherLocale(locale);
+const otherEntries = await getVersions(kind, other);
+const hasCounterpart = otherEntries.some((e) => e.data.version === version);
+const alternatePath = !hasCounterpart
+  ? undefined
+  : isAlias
+    ? localePath(other, PATHS[kind])
+    : versionPath(kind, version, other);
+// 英語の改定履歴に、英訳の無い日本語の版への案内を添える。
+const japaneseOnly = locale === 'en' ? await getJapaneseOnlyVersions(kind) : [];
 ---
 
-<BaseLayout pageTitle={pageTitle} path={path}>
+<BaseLayout locale={locale} pageTitle={pageTitle} path={path} alternatePath={alternatePath}>
   <div class="container">
     <header class="page-hero">
-      <span class="eyebrow">{KIND_EYEBROW[kind]}</span>
+      {UI[locale].eyebrow && <span class="eyebrow">{UI[locale].eyebrow[kind]}</span>}
       <h1>{title}</h1>
       <div class="meta-row">
-        {status === 'current' && <span class="chip is-accent">最新版</span>}
-        {status === 'draft' && <span class="chip is-warning">下書き</span>}
-        <span class="chip">第{version}版</span>
-        <span class="chip">効力発生日 {formatDate(effectiveDate)}</span>
+        {status === 'current' && <span class="chip is-accent">{t.latest}</span>}
+        {status === 'draft' && <span class="chip is-warning">{t.draft}</span>}
+        <span class="chip">{t.version(version)}</span>
+        <span class="chip">{t.effective(effectiveDate)}</span>
       </div>
     </header>
 
@@ -42,33 +60,58 @@ const path = isAlias ? PATHS[kind] : versionPath(kind, version);
         {
           status === 'past' && (
             <aside class="notice" role="note">
-              これは過去版（第{version}版）です。<a href={PATHS[kind]}>最新版を見る</a>
+              {pastNotice.before}
+              <a href={localePath(locale, PATHS[kind])}>{pastNotice.link}</a>
+              {pastNotice.after}
             </aside>
           )
         }
         {
           status === 'draft' && (
             <aside class="notice draft" role="note">
-              下書き（第{version}版）です。開発サーバでだけ表示され、本番には公開されません。
+              {t.draftNotice(version)}
+            </aside>
+          )
+        }
+        {
+          // 日本語が正本で、英語は参考訳。英語の規約・PP には、どの版にも冒頭にこの注記を出す。
+          // リンク先は、訳している日本語の同じ版（最新版のページでも /privacy ではなく /privacy/vN）。
+          t.translationNotice && (
+            <aside class="notice translation" role="note">
+              {t.translationNotice.before}
+              <a href={versionPath(kind, version, 'ja')} hreflang="ja">
+                {t.translationNotice.link}
+              </a>
+              {t.translationNotice.after}
             </aside>
           )
         }
 
-        <TableOfContents headings={headings} variant="inline" />
+        <TableOfContents headings={headings} variant="inline" locale={locale} />
 
         <article class="prose">
           <slot />
         </article>
 
-        <RevisionHistory kind={kind} entries={entries} currentVersion={version} />
+        <RevisionHistory
+          kind={kind}
+          locale={locale}
+          entries={entries}
+          currentVersion={version}
+          japaneseOnly={japaneseOnly}
+        />
       </div>
 
-      <TableOfContents headings={headings} variant="sidebar" />
+      <TableOfContents headings={headings} variant="sidebar" locale={locale} />
     </div>
   </div>
 </BaseLayout>
 
 <style>
+  /* お知らせが続くとき（下書き＋参考訳の注記など）は間を詰める。 */
+  .notice:has(+ .notice) {
+    margin-bottom: 0.75rem;
+  }
   .doc-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);

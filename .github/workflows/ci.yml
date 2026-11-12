@@ -1,0 +1,26 @@
+name: CI
+
+# PR のたびに型チェックとビルドを行う（公開はしない）。
+# 文面の項目の決まり（src/content.config.ts）と日英の版・質問の確認（src/lib/entries.ts）は
+# ビルドの中で走るので、main へのマージ（＝公開）より前の PR の時点で止まる。
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      # Astro 7 は Node >=22.12.0 必須（公開用の deploy.yml と同じく 22 を使う）。
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build

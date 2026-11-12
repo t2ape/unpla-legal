@@ -1,13 +1,16 @@
 ---
 import type { MarkdownHeading } from 'astro';
+import { DEFAULT_LOCALE, UI, type Locale } from '../i18n';
 
 interface Props {
   headings: MarkdownHeading[];
   // inline = 狭い画面で本文の前に折りたたみで出す / sidebar = 広い画面で右に固定で出す。
   variant: 'inline' | 'sidebar';
+  locale?: Locale;
 }
 
-const { headings, variant } = Astro.props;
+const { headings, variant, locale = DEFAULT_LOCALE } = Astro.props;
+const label = UI[locale].legal.toc;
 const items = headings.filter((h) => h.depth === 2);
 ---
 
@@ -15,7 +18,7 @@ const items = headings.filter((h) => h.depth === 2);
   items.length > 0 &&
     (variant === 'inline' ? (
       <details class="toc-inline">
-        <summary>目次</summary>
+        <summary>{label}</summary>
         <ol>
           {items.map((h) => (
             <li>
@@ -25,8 +28,8 @@ const items = headings.filter((h) => h.depth === 2);
         </ol>
       </details>
     ) : (
-      <nav class="toc-sidebar" aria-label="目次">
-        <p class="toc-title">目次</p>
+      <nav class="toc-sidebar" aria-label={label}>
+        <p class="toc-title">{label}</p>
         <ol>
           {items.map((h) => (
             <li>
@@ -117,6 +120,7 @@ const items = headings.filter((h) => h.depth === 2);
       font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.16em;
+      text-transform: uppercase;
       color: var(--text-faint);
       margin: 0 0 0.75rem;
     }
