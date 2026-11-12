@@ -1,7 +1,7 @@
 ---
 // リンクハブ（/ と /en/）：各ドキュメントの最新版へ誘導する。
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getCommerce, getVersions, hasFaqPage, pickCurrent } from '../../lib/entries';
+import { getCommerce, getVersions, pickCurrent } from '../../lib/entries';
 import { DEFAULT_LOCALE, otherLocale, UI, type Locale } from '../../i18n';
 import { localePath, PATHS } from '../../utils';
 
@@ -16,8 +16,6 @@ const terms = pickCurrent(await getVersions('terms', locale));
 const privacy = pickCurrent(await getVersions('privacy', locale));
 // 特商法の表示は日本向けなので、日本語のハブにだけ出す。
 const commerce = await getCommerce(locale);
-// 英語のよくある質問は、質問が 1 件も無いあいだページを作らないので、カードも出さない。
-const hasFaq = await hasFaqPage(locale);
 
 const legalMeta = (entry: typeof terms) =>
   `${t.legal.version(entry.data.version)}${t.hub.metaSeparator}${t.legal.effective(entry.data.effectiveDate)}`;
@@ -45,16 +43,12 @@ const cards = [
         },
       ]
     : []),
-  ...(hasFaq
-    ? [
-        {
-          href: localePath(locale, PATHS.faq),
-          eyebrow: t.eyebrow?.faq,
-          title: t.faq.title,
-          meta: t.hub.faqMeta,
-        },
-      ]
-    : []),
+  {
+    href: localePath(locale, PATHS.faq),
+    eyebrow: t.eyebrow?.faq,
+    title: t.faq.title,
+    meta: t.hub.faqMeta,
+  },
   {
     href: localePath(locale, PATHS.support),
     eyebrow: t.eyebrow?.support,

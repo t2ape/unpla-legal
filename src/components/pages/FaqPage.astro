@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getFaqs, hasFaqPage, renderEntry } from '../../lib/entries';
+import { getFaqs, renderEntry } from '../../lib/entries';
 import { DEFAULT_LOCALE, FAQ_CATEGORY_ORDER, otherLocale, UI, type Locale } from '../../i18n';
 import { localePath, PATHS } from '../../utils';
 
@@ -29,9 +29,7 @@ const sections = await Promise.all(
   })),
 ).then((all) => all.filter((section) => section.items.length > 0));
 
-// もう一方の言語のページ。英語の質問が 1 件も無いあいだ /en/faq は無いので、対応なしにする。
-const other = otherLocale(locale);
-const alternatePath = (await hasFaqPage(other)) ? localePath(other, PATHS.faq) : undefined;
+const alternatePath = localePath(otherLocale(locale), PATHS.faq);
 const supportPath = localePath(locale, PATHS.support);
 ---
 

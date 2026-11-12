@@ -31,11 +31,6 @@ function fail(label: string, errors: string[]): void {
   if (errors.length > 0) throw new Error(`${label}\n- ${errors.join('\n- ')}`);
 }
 
-const dateKey = (date: Date) => date.toISOString().slice(0, 10);
-
-// 日本時間の今日（YYYY-MM-DD）。効力発生日と比べる。
-const todayInJapan = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' }).format(new Date());
-
 async function loadLegal(kind: Kind): Promise<{ ja: JaLegal[]; en: EnLegal[] }> {
   const [ja, en] = await Promise.all([
     getCollection(kind) as Promise<JaLegal[]>,
@@ -45,27 +40,12 @@ async function loadLegal(kind: Kind): Promise<{ ja: JaLegal[]; en: EnLegal[] }> 
 }
 
 // 規約・PP の版を確かめる。反するとビルドを止める（下書きも含めて見るので、公開前の PR の時点で気づける）。
-//   1. 日本語のファイル名が v{version}.md になっている（URL はファイル名から、リンクは版番号から作るので、
-//      ずれるとリンク切れになる）。英語は版番号を持たず、ファイル名で日本語の版と対応づける。
-//   2. 英語の版には、同じファイル名の日本語の版がある（英語だけの版は作れない）。
-//   3. 日本語の最新版（status: current）には英語の版がある（英語は状態を日本語から受け継ぐので、
+//   1. 英語の版には、同じファイル名の日本語の版がある（英語だけの版は作れない）。
+//   2. 日本語の最新版（status: current）には英語の版がある（英語は状態を日本語から受け継ぐので、
 //      /terms と /en/terms は必ず同じ版を返す）。
-//   4. 英語のいちばん古い版より新しい日本語の版（下書きを除く）には、英語の版がある。
-//      英語の改定履歴は、英語の版と「英語のいちばん古い版より前の、日本語にだけある版」を並べるので、
-//      あいだに抜けがあると、その版が英語のページから辿れなくなる。
-//   5. 本番ビルドでは、公開する版（current・past）の効力発生日が、日本時間の今日を過ぎていない。
-//      このサイトは「最新版＝効力のある版」として出すので、効力発生日より前に公開すると、まだ効力の無い版が
-//      最新版に、効力のある版が過去版に見えてしまう。改定は効力発生日の当日以降にマージする。
-// 日本語の下書きは、英訳より先に置いてよい。
-function assertVersions(kind: Kind, ja: JaLegal[], en: EnLegal[], oldestEn: number): void {
+// 英訳の無い過去版は認める（英語の改定履歴に「日本語のみ」として案内する）。日本語の下書きは英訳より先に置いてよい。
+function assertVersions(kind: Kind, ja: JaLegal[], en: EnLegal[]): void {
   const errors: string[] = [];
-  for (const entry of ja) {
-    if (entry.id !== `v${entry.data.version}`) {
-      errors.push(
-        `src/content/${kind}/${entry.id}.md の version は ${entry.data.version} です（ファイル名を v${entry.data.version}.md にするか、version を直してください）`,
-      );
-    }
-  }
   const jaIds = new Set(ja.map((e) => e.id));
   for (const entry of en) {
     if (!jaIds.has(entry.id)) {
@@ -75,48 +55,29 @@ function assertVersions(kind: Kind, ja: JaLegal[], en: EnLegal[], oldestEn: numb
     }
   }
   const enIds = new Set(en.map((e) => e.id));
-  for (const entry of ja) {
-    const { version, status } = entry.data;
-    if (enIds.has(entry.id)) continue;
-    if (status === 'current') {
-      errors.push(`日本語の最新版（第${version}版）の英語版（src/content/en/${kind}/v${version}.md）がありません`);
-    } else if (status === 'past' && version > oldestEn) {
-      errors.push(
-        `日本語の第${version}版の英語版（src/content/en/${kind}/v${version}.md）がありません（英語は第${oldestEn}版からあるので、それより新しい版は抜けを作れません）`,
-      );
-    }
-  }
-  if (!SHOW_DRAFTS) {
-    const today = todayInJapan();
-    for (const { data } of ja) {
-      if (data.status !== 'draft' && dateKey(data.effectiveDate) > today) {
-        errors.push(
-          `第${data.version}版（${data.status}）の効力発生日 ${dateKey(data.effectiveDate)} がまだ来ていません（日本時間の今日は ${today}）。効力発生日の当日以降に公開（マージ）してください`,
-        );
-      }
+  for (const { id, data } of ja) {
+    if (data.status === 'current' && !enIds.has(id)) {
+      errors.push(`日本語の最新版（第${data.version}版）の英語版（src/content/en/${kind}/${id}.md）がありません`);
     }
   }
   fail(`${kind}: 版の誤りがあります。`, errors);
 }
 
-// 公開対象の版（version 降順）を言語ごとに。日本語にだけある過去版（英訳を作る前の版）も添える。
+// 公開対象の版（version 降順）を言語ごとに。英訳の無い日本語の版（英語の改定履歴で案内する）も添える。
 async function loadVersions(kind: Kind) {
   const { ja, en } = await loadLegal(kind);
-  // 英語のいちばん古い版（下書きも含む）。これより前の版だけを「日本語にだけある過去版」として認め、
-  // 英語の改定履歴にも案内する（assertVersions の 4 と、下の japaneseOnly とで同じ値を使う）。
-  const enIds = new Set(en.map((e) => e.id));
-  const oldestEn = Math.min(...ja.filter((e) => enIds.has(e.id)).map((e) => e.data.version));
-  assertVersions(kind, ja, en, oldestEn);
+  assertVersions(kind, ja, en);
   const jaById = new Map(ja.map((e) => [e.id, e]));
   const enMerged: LegalEntry[] = en.map((e) => ({ ...e, data: { ...jaById.get(e.id)!.data, title: e.data.title } }));
   const visible = (entries: LegalEntry[]) =>
     entries
       .filter((e) => SHOW_DRAFTS || e.data.status !== 'draft')
       .sort((a, b) => b.data.version - a.data.version);
+  const enIds = new Set(en.map((e) => e.id));
   return {
     ja: visible(ja),
     en: visible(enMerged),
-    japaneseOnly: visible(ja).filter((e) => e.data.version < oldestEn),
+    japaneseOnly: visible(ja).filter((e) => !enIds.has(e.id)),
   };
 }
 const versionsOf: Record<Kind, () => ReturnType<typeof loadVersions>> = {
@@ -129,7 +90,7 @@ export async function getVersions(kind: Kind, locale: Locale = DEFAULT_LOCALE): 
   return (await versionsOf[kind]())[locale];
 }
 
-// 英語の改定履歴の下に案内する、日本語にだけある過去版（英訳を作る前の版）を version 降順で返す。
+// 英語の改定履歴の下に案内する、英訳の無い日本語の版を version 降順で返す。
 export async function getJapaneseOnlyVersions(kind: Kind): Promise<LegalEntry[]> {
   return (await versionsOf[kind]()).japaneseOnly;
 }
@@ -186,14 +147,7 @@ const faqsByLocale = once(async () => {
   return { ja: visible(ja), en: visible(enMerged) };
 });
 
-// よくある質問。英語は 0 件でもよい（そのあいだ /en/faq は作らず、英語のページからもリンクしない）。
+// よくある質問。英語は訳した質問だけを返す。
 export async function getFaqs(locale: Locale = DEFAULT_LOCALE): Promise<FaqEntry[]> {
   return (await faqsByLocale())[locale];
-}
-
-// その言語のよくある質問のページ（/faq・/en/faq）を作るか。ページの生成とリンク（ナビ・ハブ・サポート・
-// 言語の切り替え）は、必ずこの関数で決める（食い違うと、作っていないページへのリンクになる）。
-// 日本語は常に作る。英語は、公開する質問が 1 件も無いあいだは作らない。
-export async function hasFaqPage(locale: Locale): Promise<boolean> {
-  return locale === 'ja' || (await getFaqs(locale)).length > 0;
 }

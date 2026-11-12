@@ -55,7 +55,7 @@ interface Strings {
     // 英語のページにだけ出す文言（日本語が正本なので、日本語のページには出さない）。
     // 冒頭の参考訳の注記。link が日本語の同じ版へのリンクになる。
     translationNotice?: { before: string; link: string; after: string };
-    // 改定履歴の下に添える、日本語にだけある過去版（英訳を作る前の版）の案内。
+    // 改定履歴の下に添える、英訳の無い版（日本語のみ）の案内。
     // lead のあとに、版へのリンクを separator で区切って並べる。
     japaneseOnlyVersions?: { lead: string; separator: string };
   };
@@ -186,7 +186,7 @@ export const UI: Record<Locale, Strings> = {
         after:
           ' is the official text. If there is any discrepancy between this translation and the Japanese version, the Japanese version prevails.',
       },
-      japaneseOnlyVersions: { lead: 'Earlier versions are available in Japanese only: ', separator: ', ' },
+      japaneseOnlyVersions: { lead: 'Available in Japanese only: ', separator: ', ' },
     },
     hub: {
       lead: 'The terms that apply when you use UnplaQuest, and how your information is handled.',

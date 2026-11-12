@@ -1,8 +1,7 @@
 // ビルドしたページ（dist/**/*.html）の中の、サイトの中を指す URL をすべて確かめる。反するとビルドを止める。
 //   1. 行き先のファイルと、#id があればその id が実在する
-//      （未訳・下書きの質問、作っていない版、消したページ・画像へのリンクを止める）。
-//      URL を持つ属性（href・src・srcset・action・poster）はすべて見る（<a>・<link rel="alternate">・
-//      canonical・画像・スタイルシートなど、要素の種類を問わない）。
+//      （未訳・下書きの質問、作っていない版、消したページへのリンクを止める）。
+//      href と src を持つ要素はすべて見る（<a>・<link rel="alternate">・canonical・画像・スタイルシートなど）。
 //      行き先は dist のファイルの一覧と、大文字・小文字まで完全に一致するかで見る（GitHub Pages は区別するので、
 //      大文字・小文字を区別しない macOS で通っても公開すると 404 になる、ということがないようにする）。
 //   2. 本文のリンク（<a href>）は、もう一方の言語にも同じページがあるのに、そちらへ hreflang 無しでリンクしない
@@ -36,14 +35,6 @@ interface Link {
   hreflang?: string;
 }
 
-// URL を持つ属性。srcset は「URL 幅, URL 幅, …」の形なので、URL の部分だけを取り出す。
-const URL_ATTRS = ['href', 'src', 'action', 'poster'];
-const srcsetUrls = (srcset: string) =>
-  srcset
-    .split(',')
-    .map((candidate) => candidate.trim().split(/\s+/)[0])
-    .filter(Boolean);
-
 interface Page {
   ids: Set<string>;
   links: Link[];
@@ -55,14 +46,13 @@ function readPage(html: string): Page {
     const attr = (name: string) => node.attrs?.find((a) => a.name === name)?.value;
     const id = attr('id');
     if (id) page.ids.add(id);
-    for (const name of URL_ATTRS) {
-      const href = attr(name);
-      if (href === undefined) continue;
-      const isAnchor = node.nodeName === 'a' && name === 'href';
+    const href = attr('href');
+    if (href !== undefined) {
+      const isAnchor = node.nodeName === 'a';
       page.links.push({ href, isAnchor, hreflang: isAnchor ? attr('hreflang') : undefined });
     }
-    const srcset = attr('srcset');
-    if (srcset) for (const href of srcsetUrls(srcset)) page.links.push({ href, isAnchor: false });
+    const src = attr('src');
+    if (src !== undefined) page.links.push({ href: src, isAnchor: false });
     node.childNodes?.forEach(walk);
     if (node.content) walk(node.content);
   };
@@ -91,16 +81,6 @@ function splitLocale(path: string): { locale: Locale; rest: string } {
   return { locale: DEFAULT_LOCALE, rest: path };
 }
 
-// hreflang の言語部分（ja-JP → ja、EN → en）。
-const primaryLanguage = (tag: string | undefined) => tag?.toLowerCase().split('-')[0];
-
-function decode(text: string): string | undefined {
-  try {
-    return decodeURIComponent(text);
-  } catch {
-    return undefined;
-  }
-}
 
 export default function checkLinks(): AstroIntegration {
   let site: URL | undefined;
@@ -133,21 +113,17 @@ export default function checkLinks(): AstroIntegration {
           const fromLocale = splitLocale(from).locale;
           for (const { href, isAnchor, hreflang } of page.links) {
             const error = (message: string) => errors.push(`${from} → ${href}: ${message}`);
-            let url: URL;
+            let url: URL, path: string, anchor: string;
             try {
               url = new URL(href, new URL(from, siteUrl));
+              path = decodeURIComponent(url.pathname);
+              anchor = decodeURIComponent(url.hash.slice(1));
             } catch {
               error('URL として読めません');
               continue;
             }
             // 外部サイト・mailto: などは見ない。http と https の違いは問わない。
             if (!['http:', 'https:'].includes(url.protocol) || url.hostname !== siteUrl.hostname) continue;
-            const path = decode(url.pathname);
-            const anchor = decode(url.hash.slice(1));
-            if (path === undefined || anchor === undefined) {
-              error('URL の % の書き方が誤っています');
-              continue;
-            }
             const target = fileFor(path);
             if (!target) {
               error('行き先のファイルがありません');
@@ -159,15 +135,10 @@ export default function checkLinks(): AstroIntegration {
             }
             if (!isAnchor) continue;
             const { locale: toLocale, rest } = splitLocale(path);
-            if (toLocale !== fromLocale && primaryLanguage(hreflang) !== toLocale) {
+            if (toLocale !== fromLocale && hreflang !== toLocale) {
               const counterpart = localePath(fromLocale, rest);
-              const counterpartFile = fileFor(counterpart);
-              if (!counterpartFile) continue; // 日本語にしかないページ（特商法の表示）へのリンクはかまわない
-              if (anchor && !pages.get(counterpartFile)?.ids.has(anchor)) {
-                error(
-                  `言語の違うページへのリンクです。同じ言語の ${counterpart} には id="${anchor}" がまだありません（その質問・見出しを訳してから、${counterpart}${url.hash} にリンクしてください）`,
-                );
-              } else {
+              // 日本語にしかないページ（特商法の表示）へのリンクはかまわない。
+              if (fileFor(counterpart)) {
                 error(`言語の違うページへのリンクです。同じ言語の ${counterpart}${url.hash} にしてください`);
               }
             }

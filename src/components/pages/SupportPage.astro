@@ -2,7 +2,7 @@
 // サポートページ（/support と /en/support。App Store Connect の「サポート URL」に登録する安定 URL）。
 // 問い合わせフォームは設けず、連絡先メールと基本的な案内のみを掲載する静的ページ。
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getCommerce, hasFaqPage } from '../../lib/entries';
+import { getCommerce } from '../../lib/entries';
 import { DEFAULT_LOCALE, otherLocale, UI, type Locale } from '../../i18n';
 import { localePath, PATHS, SUPPORT_EMAIL } from '../../utils';
 
@@ -16,8 +16,6 @@ const t = UI[locale];
 // Apple は特商法の表示を「アプリ内かサポートサイト」に求めるので、日本語のページから辿れるようにする
 // （日本向けの表示なので、英語のページには出さない）。
 const commerce = await getCommerce(locale);
-// 英語のよくある質問は、質問が 1 件も無いあいだページを作らないので、案内も出さない。
-const hasFaq = await hasFaqPage(locale);
 const links = [
   { href: localePath(locale, PATHS.terms), label: t.legal.label.terms },
   { href: localePath(locale, PATHS.privacy), label: t.legal.label.privacy },
@@ -38,17 +36,13 @@ const links = [
       <p class="lead">{t.support.lead}</p>
     </header>
 
-    {
-      hasFaq && (
-        <a class="faq-link" href={localePath(locale, PATHS.faq)}>
-          <span class="faq-body">
-            <span class="faq-title">{t.faq.title}</span>
-            <span class="faq-meta">{t.support.faqMeta}</span>
-          </span>
-          <span aria-hidden="true">→</span>
-        </a>
-      )
-    }
+    <a class="faq-link" href={localePath(locale, PATHS.faq)}>
+      <span class="faq-body">
+        <span class="faq-title">{t.faq.title}</span>
+        <span class="faq-meta">{t.support.faqMeta}</span>
+      </span>
+      <span aria-hidden="true">→</span>
+    </a>
 
     <section class="contact" aria-labelledby="contact-heading">
       <h2 id="contact-heading">{t.support.contactHeading}</h2>
