@@ -27,7 +27,11 @@ const dateKey = (date: Date | undefined) => (date ? date.toISOString().slice(0, 
 //      （2 と合わせて、/terms と /en/terms は必ず同じ版を返す）。
 //   4. ファイル名が v{version}.md になっている（URL はファイル名から、リンクは版番号から作るので、
 //      ずれるとリンク切れになる）。
-// 日本語にだけある過去版（英訳を作る前の版）は認める。
+//   5. 英語のいちばん古い版より新しい日本語の版には、英語の版がある（下書きを除く）。
+//      英語の改定履歴は、英語の版と「英語のいちばん古い版より前の、日本語にだけある版」を並べるので、
+//      あいだに抜けがあると、その版が英語のページから辿れなくなる。
+// 日本語にだけある過去版（英訳を作る前の版）は、英語のいちばん古い版より前のものだけ認める。
+// 日本語の下書きは、英訳より先に置いてよい。
 export function assertLocaleParity(kind: Kind, ja: LegalEntry[], en: LegalEntry[]): void {
   const errors: string[] = [];
   for (const [dir, entries] of [[kind, ja], [`en/${kind}`, en]] as const) {
@@ -58,10 +62,15 @@ export function assertLocaleParity(kind: Kind, ja: LegalEntry[], en: LegalEntry[
       );
     }
   }
+  const oldestEn = Math.min(...enVersions);
   for (const entry of ja) {
-    if (entry.data.status === 'current' && !enVersions.has(entry.data.version)) {
+    const { version, status } = entry.data;
+    if (enVersions.has(version)) continue;
+    if (status === 'current') {
+      errors.push(`日本語の最新版（第${version}版）の英語版（src/content/en/${kind}/v${version}.md）がありません`);
+    } else if (status === 'past' && version > oldestEn) {
       errors.push(
-        `日本語の最新版（第${entry.data.version}版）の英語版（src/content/en/${kind}/v${entry.data.version}.md）がありません`,
+        `日本語の第${version}版の英語版（src/content/en/${kind}/v${version}.md）がありません（英語は第${oldestEn}版からあるので、それより新しい版は抜けを作れません）`,
       );
     }
   }
@@ -90,8 +99,10 @@ export function pickCurrent(entries: LegalEntry[]): LegalEntry {
   return current;
 }
 
-// 特定商取引法に基づく表示。本番で下書きなら null（ページを生成しない）。日本語だけ。
-export async function getCommerce(): Promise<CollectionEntry<'commerce'> | null> {
+// 特定商取引法に基づく表示。本番で下書きなら null（ページを生成しない）。
+// 日本向けの表示なので日本語だけ。英語のページ（ナビ・ハブ・サポート）では常に null で、リンクも出さない。
+export async function getCommerce(locale: Locale = DEFAULT_LOCALE): Promise<CollectionEntry<'commerce'> | null> {
+  if (locale !== 'ja') return null;
   const [entry] = await getCollection('commerce');
   if (!entry) return null;
   return SHOW_DRAFTS || entry.data.status === 'published' ? entry : null;
@@ -139,4 +150,11 @@ export async function getFaqs(locale: Locale = DEFAULT_LOCALE): Promise<FaqEntry
   return entries
     .filter((e) => SHOW_DRAFTS || e.data.status === 'published')
     .sort((a, b) => a.data.order - b.data.order);
+}
+
+// その言語のよくある質問のページ（/faq・/en/faq）を作るか。ページの生成とリンク（ナビ・ハブ・サポート・
+// 言語の切り替え）は、必ずこの関数で決める（食い違うと、作っていないページへのリンクになる）。
+// 日本語は常に作る。英語は、公開する質問が 1 件も無いあいだは作らない。
+export async function hasFaqPage(locale: Locale): Promise<boolean> {
+  return locale === 'ja' || (await getFaqs(locale)).length > 0;
 }

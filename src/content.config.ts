@@ -1,6 +1,7 @@
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'zod';
+import { FAQ_CATEGORY_ORDER } from './i18n';
 
 // 法務ドキュメント共通スキーマ。
 // 各版（vN.md）は version / effectiveDate / status をフロントマターに持つ。
@@ -30,8 +31,8 @@ const legalSchema = z.discriminatedUnion('status', [
 const faqSchema = z.object({
   // 質問文。見出しとページ上部の一覧に出す。
   question: z.string(),
-  // 所属する分類。並び順は src/i18n.ts の FAQ_CATEGORY_ORDER、見出しは UI[locale].faq.categories で決める。
-  category: z.enum(['trouble', 'strict', 'account', 'feature']),
+  // 所属する分類。分類の一覧と並び順は src/i18n.ts の FAQ_CATEGORY_ORDER、見出しは UI[locale].faq.categories で決める。
+  category: z.enum(FAQ_CATEGORY_ORDER),
   // 分類内の並び順（小さいほど上）。
   order: z.number().int(),
   // published = /faq に出す / draft = `npm run dev` でだけ出す。

@@ -1,7 +1,7 @@
 ---
 import { render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getFaqs } from '../../lib/entries';
+import { getFaqs, hasFaqPage } from '../../lib/entries';
 import { DEFAULT_LOCALE, FAQ_CATEGORY_ORDER, otherLocale, UI, type Locale } from '../../i18n';
 import { localePath, PATHS } from '../../utils';
 
@@ -32,7 +32,7 @@ const sections = await Promise.all(
 
 // もう一方の言語のページ。英語の質問が 1 件も無いあいだ /en/faq は無いので、対応なしにする。
 const other = otherLocale(locale);
-const alternatePath = (await getFaqs(other)).length > 0 ? localePath(other, PATHS.faq) : undefined;
+const alternatePath = (await hasFaqPage(other)) ? localePath(other, PATHS.faq) : undefined;
 const supportPath = localePath(locale, PATHS.support);
 ---
 
@@ -44,7 +44,8 @@ const supportPath = localePath(locale, PATHS.support);
 >
   <div class="container narrow">
     <header class="page-hero">
-      <span class="eyebrow">FAQ</span>
+      {/* 題の上の英字ラベルは日本語のページにだけ添える（英語では題と同じ語の繰り返しになる）。 */}
+      {locale === 'ja' && <span class="eyebrow">FAQ</span>}
       <h1>{t.faq.title}</h1>
       <p class="lead">{t.faq.lead.before}<a href={supportPath}>{t.faq.lead.link}</a>{t.faq.lead.after}</p>
     </header>

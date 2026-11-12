@@ -69,7 +69,8 @@ status: current          # current（最新） | past（過去版） | draft（�
   2. 同じ版番号どうしは `status` と `effectiveDate` が同じ。
   3. 日本語の最新版（`status: current`）には英語の版がある（1〜3 により、`/terms` と `/en/terms` は必ず同じ版を返す）。
   4. ファイル名が `v{version}.md` になっている（日本語・英語とも。URL はファイル名から、リンクは版番号から作るので、ずれるとリンク切れになる）。
-- 日本語にだけある過去版（英訳を作る前の第1版）は認める。英語の改定履歴には「以前の版は日本語のみ」として日本語の版へのリンクが出る（英語のいちばん古い版より前の版だけ）。
+  5. 英語のいちばん古い版より新しい日本語の版（下書きを除く）には、英語の版がある（英語の改定履歴に抜けを作らない）。
+- 日本語にだけある過去版は、英語のいちばん古い版より前のもの（英訳を作る前の第1版）だけ認める。英語の改定履歴には「以前の版は日本語のみ」として日本語の版へのリンクが出る。日本語の下書きは英訳より先に置いてよい。
 - つまり、**改定するときは日本語と英語の `vN.md` を必ず組で作り、組で公開する**。
 - レイアウト・ナビ・日付・参考訳の注記など本文以外の文言は `src/i18n.ts` に言語ごとに置く（英語のページに日本語の文言を残さない）。
 
@@ -80,7 +81,7 @@ status: current          # current（最新） | past（過去版） | draft（�
 ```yaml
 ---
 question: ブロックを外せなくて困っています # 質問文
-category: trouble # trouble | strict | feature | account（見出しと並び順は src/i18n.ts）
+category: trouble # trouble | strict | feature | account（分類の一覧・見出し・並び順は src/i18n.ts の FAQ_CATEGORY_ORDER と UI）
 order: 1          # 分類内の並び順（小さいほど上）
 status: published # published | draft（draft は `npm run dev` でだけ出る）
 ---

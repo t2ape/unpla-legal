@@ -39,14 +39,14 @@ const t = UI[locale].legal;
     }
   </ol>
   {
-    japaneseOnly.length > 0 && (
+    t.japaneseOnlyVersions && japaneseOnly.length > 0 && (
       <p class="japanese-only">
-        {UI.en.legal.japaneseOnlyVersions}{' '}
+        {t.japaneseOnlyVersions.lead}
         {japaneseOnly.map((entry, i) => (
           <>
-            {i > 0 && ', '}
+            {i > 0 && t.japaneseOnlyVersions?.separator}
             <a href={versionPath(kind, entry.data.version, 'ja')} hreflang="ja">
-              {UI.en.legal.version(entry.data.version)}
+              {t.version(entry.data.version)}
             </a>
           </>
         ))}

@@ -24,6 +24,7 @@ interface Props {
 const { kind, locale = DEFAULT_LOCALE, entry, entries, headings, isAlias } = Astro.props;
 const t = UI[locale].legal;
 const { title, version, effectiveDate, status } = entry.data;
+const pastNotice = t.pastNotice(version);
 const pageTitle = isAlias ? title : t.titleWithVersion(title, version);
 const path = isAlias ? localePath(locale, PATHS[kind]) : versionPath(kind, version, locale);
 
@@ -62,9 +63,9 @@ const japaneseOnly =
         {
           status === 'past' && (
             <aside class="notice" role="note">
-              {t.pastNotice(version)}
-              {locale === 'en' && ' '}
-              <a href={localePath(locale, PATHS[kind])}>{t.pastNoticeLink}</a>
+              {pastNotice.before}
+              <a href={localePath(locale, PATHS[kind])}>{pastNotice.link}</a>
+              {pastNotice.after}
             </aside>
           )
         }

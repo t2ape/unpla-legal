@@ -3,7 +3,6 @@
 
 export type Locale = 'ja' | 'en';
 export type Kind = 'terms' | 'privacy';
-export type FaqCategory = 'trouble' | 'strict' | 'feature' | 'account';
 
 export const DEFAULT_LOCALE: Locale = 'ja';
 
@@ -18,8 +17,11 @@ export function formatDate(date: Date, locale: Locale = DEFAULT_LOCALE): string 
   return `${date.getUTCFullYear()}年${date.getUTCMonth() + 1}月${date.getUTCDate()}日`;
 }
 
-// よくある質問の分類の並び順（見出しは UI[locale].faq.categories）。
-export const FAQ_CATEGORY_ORDER: readonly FaqCategory[] = ['trouble', 'strict', 'feature', 'account'];
+// よくある質問の分類と、その並び順（見出しは UI[locale].faq.categories）。
+// 分類の一覧はここだけに書く（src/content.config.ts の schema もここから作る）。
+// 分類を足すと、各言語の見出しを書くまで型エラーになる。
+export const FAQ_CATEGORY_ORDER = ['trouble', 'strict', 'feature', 'account'] as const;
+export type FaqCategory = (typeof FAQ_CATEGORY_ORDER)[number];
 
 interface Strings {
   // トップの <title> と見出し。
@@ -27,7 +29,8 @@ interface Strings {
   skipLink: string;
   menu: string;
   navLabel: string;
-  nav: { terms: string; privacy: string; commerce: string; faq: string; support: string };
+  // commerce（特商法の表示）は日本向けなので、日本語にだけ書く。
+  nav: { terms: string; privacy: string; commerce?: string; faq: string; support: string };
   // 言語の切り替えリンク。切り替え先の言語の名前を、その言語で書く。
   switchTo: string;
   legal: {
@@ -40,8 +43,8 @@ interface Strings {
     // 効力発生日。下書きで日付が決まっていないときは date が無い。
     effective: (date: Date | undefined) => string;
     titleWithVersion: (title: string, version: number) => string;
-    pastNotice: (version: number) => string;
-    pastNoticeLink: string;
+    // 過去版の冒頭の注記。link が最新版へのリンクになる。
+    pastNotice: (version: number) => { before: string; link: string; after: string };
     draftNotice: (version: number) => string;
     toc: string;
     history: string;
@@ -49,7 +52,8 @@ interface Strings {
     // 冒頭の参考訳の注記。link が日本語の同じ版へのリンクになる。
     translationNotice?: { before: string; link: string; after: string };
     // 改定履歴の下に添える、日本語にだけある過去版（英訳を作る前の版）の案内。
-    japaneseOnlyVersions?: string;
+    // lead のあとに、版へのリンクを separator で区切って並べる。
+    japaneseOnlyVersions?: { lead: string; separator: string };
   };
   hub: {
     lead: string;
@@ -98,8 +102,7 @@ export const UI: Record<Locale, Strings> = {
       version: (version) => `第${version}版`,
       effective: (date) => `効力発生日 ${date ? formatDate(date, 'ja') : '未定'}`,
       titleWithVersion: (title, version) => `${title}（第${version}版）`,
-      pastNotice: (version) => `これは過去版（第${version}版）です。`,
-      pastNoticeLink: '最新版を見る',
+      pastNotice: (version) => ({ before: `これは過去版（第${version}版）です。`, link: '最新版を見る', after: '' }),
       draftNotice: (version) =>
         `下書き（第${version}版）です。開発サーバでだけ表示され、本番には公開されません。`,
       toc: '目次',
@@ -147,8 +150,6 @@ export const UI: Record<Locale, Strings> = {
     nav: {
       terms: 'Terms',
       privacy: 'Privacy',
-      // 特商法の表示は日本向けで、英語のページからはリンクしない（この文言は使わない）。
-      commerce: '',
       faq: 'FAQ',
       support: 'Support',
     },
@@ -161,8 +162,11 @@ export const UI: Record<Locale, Strings> = {
       version: (version) => `Version ${version}`,
       effective: (date) => (date ? `Effective ${formatDate(date, 'en')}` : 'Effective date to be determined'),
       titleWithVersion: (title, version) => `${title} (Version ${version})`,
-      pastNotice: (version) => `This is a past version (Version ${version}).`,
-      pastNoticeLink: 'See the latest version',
+      pastNotice: (version) => ({
+        before: `This is a past version (Version ${version}). `,
+        link: 'See the latest version',
+        after: '',
+      }),
       draftNotice: (version) =>
         `This is a draft (Version ${version}). It is shown only on the development server and is not published.`,
       toc: 'Contents',
@@ -173,7 +177,7 @@ export const UI: Record<Locale, Strings> = {
         after:
           ' is the official text. If there is any discrepancy between this translation and the Japanese version, the Japanese version prevails.',
       },
-      japaneseOnlyVersions: 'Earlier versions are available in Japanese only:',
+      japaneseOnlyVersions: { lead: 'Earlier versions are available in Japanese only: ', separator: ', ' },
     },
     hub: {
       lead: 'The terms that apply when you use UnplaQuest, and how your information is handled.',

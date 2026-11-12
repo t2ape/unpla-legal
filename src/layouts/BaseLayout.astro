@@ -1,7 +1,7 @@
 ---
 // 全ページ共通の枠（ヘッダー・フッター・配色・文字組み）。
 import { Font } from 'astro:assets';
-import { getCommerce, getFaqs } from '../lib/entries';
+import { getCommerce, hasFaqPage } from '../lib/entries';
 import { DEFAULT_LOCALE, otherLocale, UI, type Locale } from '../i18n';
 import { localePath, PATHS } from '../utils';
 
@@ -23,13 +23,13 @@ const t = UI[locale];
 const title = pageTitle ? `${pageTitle} | UnplaQuest` : t.siteTitle;
 
 // 特商法の表示は日本向けなので日本語のナビにだけ出す（下書きの間は出さない）。
-const commerce = locale === 'ja' ? await getCommerce() : null;
+const commerce = await getCommerce(locale);
 // 英語のよくある質問は、質問が 1 件も無いあいだページを作らないので、ナビにも出さない。
-const hasFaq = locale === 'ja' || (await getFaqs(locale)).length > 0;
+const hasFaq = await hasFaqPage(locale);
 const nav = [
   { href: localePath(locale, PATHS.terms), label: t.nav.terms },
   { href: localePath(locale, PATHS.privacy), label: t.nav.privacy },
-  ...(commerce ? [{ href: PATHS.commerce, label: t.nav.commerce }] : []),
+  ...(commerce && t.nav.commerce ? [{ href: PATHS.commerce, label: t.nav.commerce }] : []),
   ...(hasFaq ? [{ href: localePath(locale, PATHS.faq), label: t.nav.faq }] : []),
   { href: localePath(locale, PATHS.support), label: t.nav.support },
 ];
