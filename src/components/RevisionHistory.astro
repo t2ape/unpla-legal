@@ -45,7 +45,7 @@ const t = UI[locale].legal;
         {japaneseOnly.map((entry, i) => (
           <>
             {i > 0 && ', '}
-            <a href={versionPath(kind, entry.data.version, 'ja')} lang="ja" hreflang="ja">
+            <a href={versionPath(kind, entry.data.version, 'ja')} hreflang="ja">
               {UI.en.legal.version(entry.data.version)}
             </a>
           </>
