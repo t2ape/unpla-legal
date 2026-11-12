@@ -62,7 +62,7 @@ export function assertLocaleParity(kind: Kind, ja: LegalEntry[], en: LegalEntry[
       );
     }
   }
-  const oldestEn = Math.min(...enVersions);
+  const oldestEn = oldestEnglishVersion(en);
   for (const entry of ja) {
     const { version, status } = entry.data;
     if (enVersions.has(version)) continue;
@@ -77,6 +77,19 @@ export function assertLocaleParity(kind: Kind, ja: LegalEntry[], en: LegalEntry[
   if (errors.length > 0) {
     throw new Error(`${kind}: 日本語と英語の版がそろっていません。\n- ${errors.join('\n- ')}`);
   }
+}
+
+// 英語のいちばん古い版。これより前の版だけを「日本語にだけある過去版」として認める（assertLocaleParity の 5）。
+// 下書きも含めて数える（版の確認と、英語の改定履歴の案内とで同じ値を使う）。
+function oldestEnglishVersion(en: LegalEntry[]): number {
+  return Math.min(...en.map((e) => e.data.version));
+}
+
+// 英語の改定履歴の下に案内する、日本語にだけある過去版（英訳を作る前の版）を version 降順で返す。
+export async function getJapaneseOnlyVersions(kind: Kind): Promise<LegalEntry[]> {
+  const [ja, en] = await Promise.all([getVersions(kind, 'ja'), loadLegal(kind, 'en')]);
+  const oldestEn = oldestEnglishVersion(en);
+  return ja.filter((e) => e.data.version < oldestEn);
 }
 
 // 公開対象の版を version 降順で返す。
@@ -146,10 +159,28 @@ export async function getFaqs(locale: Locale = DEFAULT_LOCALE): Promise<FaqEntry
   const ja = await getCollection('faq');
   const en = HAS_EN_FAQ_FILES ? await getCollection('faqEn') : [];
   assertFaqParity(ja, en);
-  const entries: FaqEntry[] = locale === 'en' ? en : ja;
-  return entries
+  const entries: FaqEntry[] = (locale === 'en' ? en : ja)
     .filter((e) => SHOW_DRAFTS || e.data.status === 'published')
     .sort((a, b) => a.data.order - b.data.order);
+  assertFaqLinks(locale, entries);
+  return entries;
+}
+
+// 回答の中の、ほかの質問へのリンク（[…](#<id>)）の行き先が、同じページに出る質問にあることを確かめる。
+// 英語は訳した質問だけを出すので、リンク先が未訳・下書きだと行き先の無いリンクになる。無ければビルドを止める。
+export function assertFaqLinks(locale: Locale, entries: FaqEntry[]): void {
+  const ids = new Set(entries.map((e) => e.id));
+  const errors: string[] = [];
+  for (const entry of entries) {
+    for (const [, target] of (entry.body ?? '').matchAll(/\]\(#([^)\s]+)\)/g)) {
+      if (!ids.has(target)) {
+        errors.push(`${entry.id} の回答が #${target} にリンクしていますが、その質問はこのページに出ません`);
+      }
+    }
+  }
+  if (errors.length > 0) {
+    throw new Error(`faq（${locale}）: 行き先の無いリンクがあります。\n- ${errors.join('\n- ')}`);
+  }
 }
 
 // その言語のよくある質問のページ（/faq・/en/faq）を作るか。ページの生成とリンク（ナビ・ハブ・サポート・

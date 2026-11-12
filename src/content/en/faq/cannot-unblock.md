@@ -10,7 +10,7 @@ How you remove a block depends on the kind of block and on the options you chose
 - **Focus for a while**: You can stop it at any time with "Unblock".
 - **Block on a schedule**: If you turned on "Allow pausing the block" when you created it, you can pause it from "Active blocks". If it is off, the block cannot be removed until its end time.
 - **Limit by time**: If you turned on "Allow resetting the limit" when you created it, you can reset it after you reach the limit. If it is off, it resets automatically at midnight.
-- **Limit by opens**: If you have opens left, you can pause the block one time at a time from "Active blocks". If you turned on "Allow resetting the limit" when you created it, you can also reset it after you reach the limit. If it is off, it resets automatically at midnight.
+- **Limit by opens**: If you have opens left, you can pause the block from "Active blocks", using one open each time. If you turned on "Allow resetting the limit" when you created it, you can also reset it after you reach the limit. If it is off, it resets automatically at midnight.
 
 While a block is active, you cannot delete or edit that block or limit, or the list it uses. Please do so outside the block's hours, or while it is paused.
 

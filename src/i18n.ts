@@ -45,7 +45,8 @@ interface Strings {
     titleWithVersion: (title: string, version: number) => string;
     // 過去版の冒頭の注記。link が最新版へのリンクになる。
     pastNotice: (version: number) => { before: string; link: string; after: string };
-    draftNotice: (version: number) => string;
+    // 下書きの注記。版を持たない書類（特商法の表示）では version を渡さない。
+    draftNotice: (version?: number) => string;
     toc: string;
     history: string;
     // 英語のページにだけ出す文言（日本語が正本なので、日本語のページには出さない）。
@@ -104,7 +105,7 @@ export const UI: Record<Locale, Strings> = {
       titleWithVersion: (title, version) => `${title}（第${version}版）`,
       pastNotice: (version) => ({ before: `これは過去版（第${version}版）です。`, link: '最新版を見る', after: '' }),
       draftNotice: (version) =>
-        `下書き（第${version}版）です。開発サーバでだけ表示され、本番には公開されません。`,
+        `下書き${version ? `（第${version}版）` : ''}です。開発サーバでだけ表示され、本番には公開されません。`,
       toc: '目次',
       history: '改定履歴',
     },
@@ -168,7 +169,7 @@ export const UI: Record<Locale, Strings> = {
         after: '',
       }),
       draftNotice: (version) =>
-        `This is a draft (Version ${version}). It is shown only on the development server and is not published.`,
+        `This is a draft${version ? ` (Version ${version})` : ''}. It is shown only on the development server and is not published.`,
       toc: 'Contents',
       history: 'Revision history',
       translationNotice: {

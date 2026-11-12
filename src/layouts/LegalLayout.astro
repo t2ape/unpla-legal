@@ -3,7 +3,7 @@ import type { MarkdownHeading } from 'astro';
 import BaseLayout from './BaseLayout.astro';
 import RevisionHistory from '../components/RevisionHistory.astro';
 import TableOfContents from '../components/TableOfContents.astro';
-import { getVersions, type Kind, type LegalEntry } from '../lib/entries';
+import { getJapaneseOnlyVersions, getVersions, type Kind, type LegalEntry } from '../lib/entries';
 import { DEFAULT_LOCALE, otherLocale, UI, type Locale } from '../i18n';
 import { localePath, PATHS, versionPath } from '../utils';
 
@@ -39,10 +39,7 @@ const alternatePath = !hasCounterpart
     ? localePath(other, PATHS[kind])
     : versionPath(kind, version, other);
 // 英語の改定履歴に、日本語にだけある過去版（英訳を作る前の版）への案内を添える。
-// 英語のいちばん古い版より前の版だけにする（英訳がまだ無い新しい下書きを「過去版」として出さない）。
-const oldestVersion = Math.min(...entries.map((e) => e.data.version));
-const japaneseOnly =
-  locale === 'en' ? otherEntries.filter((o) => o.data.version < oldestVersion) : [];
+const japaneseOnly = locale === 'en' ? await getJapaneseOnlyVersions(kind) : [];
 ---
 
 <BaseLayout locale={locale} pageTitle={pageTitle} path={path} alternatePath={alternatePath}>
