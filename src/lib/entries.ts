@@ -119,7 +119,6 @@ export async function getCommerce(locale: Locale = DEFAULT_LOCALE): Promise<Coll
 //   2. 英語を公開するなら、日本語も公開している（英訳が日本語より先に出ないようにする）。
 //      日本語は公開済みで英語は下書き（翻訳中）、は認める。
 // 分類と並び順は日本語のものを使うので、食い違いようがない。
-// 回答の中のリンク（ほかの質問へのリンクを含む）は、ビルドしたページで確かめる（src/integrations/check-links.ts）。
 function assertFaqs(ja: CollectionEntry<'faq'>[], en: EnFaq[]): void {
   const errors: string[] = [];
   const jaById = new Map(ja.map((e) => [e.id, e]));

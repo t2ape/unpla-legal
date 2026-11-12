@@ -1,7 +1,7 @@
 name: CI
 
 # PR のたびに型チェックとビルドを行う（公開はしない）。
-# 日英の版・質問の確認（src/lib/entries.ts）とリンクの確認（src/integrations/check-links.ts）は
+# 文面の項目の決まり（src/content.config.ts）と日英の版・質問の確認（src/lib/entries.ts）は
 # ビルドの中で走るので、main へのマージ（＝公開）より前の PR の時点で止まる。
 on:
   pull_request:
