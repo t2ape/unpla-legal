@@ -1,72 +1,94 @@
 ---
 // 全ページ共通の枠（ヘッダー・フッター・配色・文字組み）。
 import { Font } from 'astro:assets';
-import { getCommerce } from '../lib/entries';
-import { PATHS } from '../utils';
+import { getCommerce, getFaqs } from '../lib/entries';
+import { DEFAULT_LOCALE, otherLocale, UI, type Locale } from '../i18n';
+import { localePath, PATHS } from '../utils';
 
 interface Props {
+  // ページの言語。<html lang>・ナビ・フッタなど枠の文言をこれで切り替える。
+  locale?: Locale;
   // <title> の「| UnplaQuest」より前。トップは省略する。
   pageTitle?: string;
   // canonical のパス。
   path: string;
+  // もう一方の言語で対応するページのパス（規約 ↔ Terms、同じ版どうし）。
+  // 対応するページが無いとき（特商法の表示など）は省略する。言語の切り替えは相手のトップへ行く。
+  alternatePath?: string;
   description?: string;
 }
 
-const { pageTitle, path, description } = Astro.props;
-const title = pageTitle ? `${pageTitle} | UnplaQuest` : 'UnplaQuest 法務情報';
+const { locale = DEFAULT_LOCALE, pageTitle, path, alternatePath, description } = Astro.props;
+const t = UI[locale];
+const title = pageTitle ? `${pageTitle} | UnplaQuest` : t.siteTitle;
 
-// 特商法の表示は下書きの間はナビに出さない。
-const commerce = await getCommerce();
+// 特商法の表示は日本向けなので日本語のナビにだけ出す（下書きの間は出さない）。
+const commerce = locale === 'ja' ? await getCommerce() : null;
+// 英語のよくある質問は、質問が 1 件も無いあいだページを作らないので、ナビにも出さない。
+const hasFaq = locale === 'ja' || (await getFaqs(locale)).length > 0;
 const nav = [
-  { href: PATHS.terms, label: '利用規約' },
-  { href: PATHS.privacy, label: 'プライバシー' },
-  ...(commerce ? [{ href: PATHS.commerce, label: '特商法の表示' }] : []),
-  { href: PATHS.faq, label: 'よくある質問' },
-  { href: PATHS.support, label: 'サポート' },
+  { href: localePath(locale, PATHS.terms), label: t.nav.terms },
+  { href: localePath(locale, PATHS.privacy), label: t.nav.privacy },
+  ...(commerce ? [{ href: PATHS.commerce, label: t.nav.commerce }] : []),
+  ...(hasFaq ? [{ href: localePath(locale, PATHS.faq), label: t.nav.faq }] : []),
+  { href: localePath(locale, PATHS.support), label: t.nav.support },
 ];
 const current = Astro.url.pathname.replace(/\/$/, '') || '/';
 // ナビの強調は配下のページ（/terms/v1 等）でも出す。aria-current は URL が一致するときだけ付ける。
 const isActive = (href: string) => current === href || current.startsWith(`${href}/`);
+
+// 言語の切り替え。対応するページがあればそこへ、無ければ相手の言語のトップへ。
+const switchLocale = otherLocale(locale);
+const switchHref = alternatePath ?? localePath(switchLocale, PATHS.home);
+// 検索エンジン向けの対応づけ（hreflang）は、本当に対応するページがあるときだけ出す。
+const alternates = alternatePath
+  ? [
+      { hreflang: locale, href: path },
+      { hreflang: switchLocale, href: alternatePath },
+      { hreflang: 'x-default', href: locale === DEFAULT_LOCALE ? path : alternatePath },
+    ]
+  : [];
 // コピーライトの年。ビルドした時点の年になる（年が変わったあとは、次のデプロイで更新される）。
 const year = new Date().getFullYear();
 ---
 
 <!doctype html>
-<html lang="ja">
+<html lang={locale}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
     <link rel="canonical" href={new URL(path, Astro.site)} />
+    {alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={new URL(a.href, Astro.site)} />)}
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#fbf7f1" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#16120e" media="(prefers-color-scheme: dark)" />
     <Font cssVariable="--font-zen-maru" />
-    <!-- 狭い画面のメニューは JS で開閉する。無効のときはナビを畳まずに出すため、有効かどうかを印として残す。 -->
+    {/* 狭い画面のメニューは JS で開閉する。無効のときはナビを畳まずに出すため、有効かどうかを印として残す。 */}
     <script is:inline>
       document.documentElement.classList.add('js');
     </script>
   </head>
   <body>
-    <a class="skip-link" href="#main">本文へ移動</a>
+    <a class="skip-link" href="#main">{t.skipLink}</a>
 
     <header class="site-header">
       <div class="site-header-inner">
-        <a class="brand" href="/">
+        <a class="brand" href={localePath(locale, PATHS.home)}>
           <span class="brand-name">UnplaQuest</span>
           <span class="brand-sub">Legal</span>
         </a>
         <button
           class="nav-toggle"
           type="button"
-          aria-label="メニュー"
+          aria-label={t.menu}
           aria-expanded="false"
           aria-controls="site-nav"
         >
           <span class="nav-toggle-icon" aria-hidden="true"></span>
         </button>
-        <nav id="site-nav" class="site-nav" aria-label="法務情報">
+        <nav id="site-nav" class="site-nav" aria-label={t.navLabel}>
           {
             nav.map((item) => (
               <a
@@ -78,6 +100,9 @@ const year = new Date().getFullYear();
               </a>
             ))
           }
+          <a class="lang-switch" href={switchHref} lang={switchLocale} hreflang={switchLocale}>
+            {t.switchTo}
+          </a>
         </nav>
       </div>
     </header>
@@ -308,6 +333,13 @@ const year = new Date().getFullYear();
     background: var(--accent-soft);
     font-weight: 600;
   }
+  /* 言語の切り替え。ナビの最後に、ほかの項目と区切って置く。 */
+  .site-nav a.lang-switch {
+    margin-left: 0.5rem;
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    font-weight: 600;
+  }
   .nav-toggle {
     display: none;
     align-items: center;
@@ -395,6 +427,9 @@ const year = new Date().getFullYear();
       font-size: 0.95rem;
       padding: 0.7rem 0.9rem;
       border-radius: 10px;
+    }
+    .js .site-nav a.lang-switch {
+      margin: 0.4rem 0 0;
     }
 
     /* JS が無効のときは開閉できないので、ナビを 2 段目に横スクロールで出す。 */
@@ -535,6 +570,29 @@ const year = new Date().getFullYear();
   }
   .prose a {
     word-break: break-all;
+  }
+
+  /* ── 英語のページの文字組み ───────────────
+     本文の行間・字間は日本語に合わせて広めにしてある。英語では詰めないと間延びするので、
+     英語のページ（<html lang="en">）でだけ上書きする。見出しの Zen Maru Gothic は欧文も持つのでそのまま使う。 */
+  html[lang='en'] body {
+    line-height: 1.7;
+    letter-spacing: 0;
+  }
+  html[lang='en'] .page-hero h1 {
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  html[lang='en'] .prose h2 {
+    line-height: 1.35;
+  }
+  html[lang='en'] .prose li {
+    margin: 0.45rem 0;
+  }
+  /* 英文の途中で語を割らない。長い URL だけは枠からはみ出さないよう折り返す。 */
+  html[lang='en'] .prose a {
+    word-break: normal;
+    overflow-wrap: anywhere;
   }
 
   /* ── フッター ─────────────────────────── */

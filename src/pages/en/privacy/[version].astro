@@ -1,0 +1,22 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+import LegalLayout from '../../../layouts/LegalLayout.astro';
+import { getVersions } from '../../../lib/entries';
+
+// 各版を固定 URL（/en/privacy/v1 等）で生成する。一度公開したら URL を変えない。
+export const getStaticPaths = (async () => {
+  const entries = await getVersions('privacy', 'en');
+  return entries.map((entry) => ({
+    params: { version: entry.id },
+    props: { entry, entries },
+  }));
+}) satisfies GetStaticPaths;
+
+const { entry, entries } = Astro.props;
+const { Content, headings } = await render(entry);
+---
+
+<LegalLayout kind="privacy" locale="en" entry={entry} entries={entries} headings={headings} isAlias={false}>
+  <Content />
+</LegalLayout>

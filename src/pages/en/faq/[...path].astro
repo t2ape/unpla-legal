@@ -1,0 +1,16 @@
+---
+import type { GetStaticPaths } from 'astro';
+import FaqPage from '../../../components/pages/FaqPage.astro';
+import { getFaqs } from '../../../lib/entries';
+
+// 英語のよくある質問（/en/faq）。本文は src/content/en/faq/<id>.md（日本語と同じファイル名）。
+// 英語の質問が 1 件も無いあいだは空のページを作らないため、生成数を 0 にできる動的ルートにしている
+// （静的ルートでは getStaticPaths が無視される）。path は常に undefined で /en/faq だけを作る。
+// 質問が 1 件でも入れば、ページと、ハブ・ナビ・サポートページからのリンクが出る。
+export const getStaticPaths = (async () => {
+  const faqs = await getFaqs('en');
+  return faqs.length > 0 ? [{ params: { path: undefined } }] : [];
+}) satisfies GetStaticPaths;
+---
+
+<FaqPage locale="en" />

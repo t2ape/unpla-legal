@@ -1,20 +1,25 @@
 ---
 import type { Kind, LegalEntry } from '../lib/entries';
-import { formatDate, versionPath } from '../utils';
+import { DEFAULT_LOCALE, UI, type Locale } from '../i18n';
+import { versionPath } from '../utils';
 
 interface Props {
   kind: Kind;
+  locale?: Locale;
   // 公開対象の全版（version 降順で渡す）。
   entries: LegalEntry[];
   // 表示中の版。
   currentVersion: number;
+  // 英語のページでだけ使う。日本語にだけある版（英訳を作る前の版）。
+  japaneseOnly?: LegalEntry[];
 }
 
-const { kind, entries, currentVersion } = Astro.props;
+const { kind, locale = DEFAULT_LOCALE, entries, currentVersion, japaneseOnly = [] } = Astro.props;
+const t = UI[locale].legal;
 ---
 
 <section class="revision-history" aria-labelledby="revision-history-heading">
-  <h2 id="revision-history-heading">改定履歴</h2>
+  <h2 id="revision-history-heading">{t.history}</h2>
   <ol>
     {
       entries.map((entry) => {
@@ -22,17 +27,32 @@ const { kind, entries, currentVersion } = Astro.props;
         const isViewing = version === currentVersion;
         return (
           <li class:list={{ 'is-viewing': isViewing }}>
-            <a href={versionPath(kind, version)} aria-current={isViewing ? 'true' : undefined}>
-              <span class="version">第{version}版</span>
-              <span class="date">効力発生日 {formatDate(effectiveDate)}</span>
-              {status === 'current' && <span class="badge">最新版</span>}
-              {status === 'draft' && <span class="badge is-draft">下書き</span>}
+            <a href={versionPath(kind, version, locale)} aria-current={isViewing ? 'true' : undefined}>
+              <span class="version">{t.version(version)}</span>
+              <span class="date">{t.effective(effectiveDate)}</span>
+              {status === 'current' && <span class="badge">{t.latest}</span>}
+              {status === 'draft' && <span class="badge is-draft">{t.draft}</span>}
             </a>
           </li>
         );
       })
     }
   </ol>
+  {
+    japaneseOnly.length > 0 && (
+      <p class="japanese-only">
+        Earlier versions are available in Japanese only:{' '}
+        {japaneseOnly.map((entry, i) => (
+          <>
+            {i > 0 && ', '}
+            <a href={versionPath(kind, entry.data.version, 'ja')} lang="ja" hreflang="ja">
+              {UI.en.legal.version(entry.data.version)}
+            </a>
+          </>
+        ))}
+      </p>
+    )
+  }
 </section>
 
 <style>
@@ -57,7 +77,7 @@ const { kind, entries, currentVersion } = Astro.props;
   li + li {
     border-top: 1px solid var(--border);
   }
-  a {
+  ol a {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -67,9 +87,17 @@ const { kind, entries, currentVersion } = Astro.props;
     text-decoration: none;
     transition: background 0.15s ease;
   }
-  a:hover {
+  ol a:hover {
     background: var(--surface-muted);
     color: var(--text);
+  }
+  .japanese-only {
+    margin: 0.75rem 0 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .japanese-only a {
+    white-space: nowrap;
   }
   .is-viewing a {
     background: var(--accent-soft);

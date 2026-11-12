@@ -3,7 +3,8 @@ import type { GetStaticPaths } from 'astro';
 import { render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCommerce } from '../../lib/entries';
-import { COMMERCE_EYEBROW, formatDate, PATHS } from '../../utils';
+import { formatDate } from '../../i18n';
+import { COMMERCE_EYEBROW, PATHS } from '../../utils';
 
 // 特定商取引法に基づく表示（/tokushoho）。本文は src/content/commerce/index.md。
 // 下書きの間は本番ビルドでページを生成しないため、生成数を 0 にできる動的ルートにしている

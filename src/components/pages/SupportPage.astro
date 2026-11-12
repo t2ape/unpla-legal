@@ -1,0 +1,193 @@
+---
+// サポートページ（/support と /en/support。App Store Connect の「サポート URL」に登録する安定 URL）。
+// 問い合わせフォームは設けず、連絡先メールと基本的な案内のみを掲載する静的ページ。
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCommerce, getFaqs } from '../../lib/entries';
+import { DEFAULT_LOCALE, otherLocale, UI, type Locale } from '../../i18n';
+import { localePath, PATHS, SUPPORT_EMAIL } from '../../utils';
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const t = UI[locale];
+
+// Apple は特商法の表示を「アプリ内かサポートサイト」に求めるので、日本語のページから辿れるようにする
+// （日本向けの表示なので、英語のページには出さない）。
+const commerce = locale === 'ja' ? await getCommerce() : null;
+// 英語のよくある質問は、質問が 1 件も無いあいだページを作らないので、案内も出さない。
+const hasFaq = locale === 'ja' || (await getFaqs(locale)).length > 0;
+const links = [
+  { href: localePath(locale, PATHS.terms), label: t.legal.label.terms },
+  { href: localePath(locale, PATHS.privacy), label: t.legal.label.privacy },
+  ...(commerce ? [{ href: PATHS.commerce, label: commerce.data.title }] : []),
+];
+---
+
+<BaseLayout
+  locale={locale}
+  pageTitle={t.support.title}
+  path={localePath(locale, PATHS.support)}
+  alternatePath={localePath(otherLocale(locale), PATHS.support)}
+>
+  <div class="container narrow">
+    <header class="page-hero">
+      {locale === 'ja' && <span class="eyebrow">Support</span>}
+      <h1>{t.support.title}</h1>
+      <p class="lead">{t.support.lead}</p>
+    </header>
+
+    {
+      hasFaq && (
+        <a class="faq-link" href={localePath(locale, PATHS.faq)}>
+          <span class="faq-body">
+            <span class="faq-title">{t.faq.title}</span>
+            <span class="faq-meta">{t.support.faqMeta}</span>
+          </span>
+          <span aria-hidden="true">→</span>
+        </a>
+      )
+    }
+
+    <section class="contact" aria-labelledby="contact-heading">
+      <h2 id="contact-heading">{t.support.contactHeading}</h2>
+      <a class="mail-button" href={`mailto:${SUPPORT_EMAIL}`}>
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="M4 6h16v12H4zM4 7l8 6 8-6"></path>
+        </svg>
+        {SUPPORT_EMAIL}
+      </a>
+      <ul class="tips">
+        {t.support.tips.map((tip) => <li>{tip}</li>)}
+      </ul>
+    </section>
+
+    <section class="related" aria-labelledby="related-heading">
+      <h2 id="related-heading">{t.support.relatedHeading}</h2>
+      <ul>
+        {
+          links.map((link) => (
+            <li>
+              <a href={link.href}>
+                {link.label}
+                <span aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .narrow {
+    max-width: 46rem;
+  }
+  h2 {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    margin: 0 0 1rem;
+  }
+  .faq-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0 0 1.5rem;
+    padding: 1.25rem 1.75rem;
+    background: var(--accent-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    text-decoration: none;
+  }
+  .faq-link:hover {
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .faq-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+  }
+  .faq-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+  }
+  .faq-meta {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .contact {
+    padding: 1.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .mail-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--surface);
+    font-weight: 600;
+    text-decoration: none;
+    word-break: break-all;
+    transition: background 0.15s ease;
+  }
+  .mail-button:hover {
+    background: var(--accent-strong);
+    color: var(--surface);
+  }
+  .mail-button svg {
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .tips {
+    margin: 1.25rem 0 0;
+    padding-left: 1.2rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+  .tips li + li {
+    margin-top: 0.35rem;
+  }
+  .related {
+    margin-top: 3rem;
+  }
+  .related ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .related li + li {
+    border-top: 1px solid var(--border);
+  }
+  .related a {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.85rem 1.15rem;
+    color: var(--text);
+    text-decoration: none;
+    transition: background 0.15s ease;
+  }
+  .related a:hover {
+    background: var(--surface-muted);
+  }
+  .related a span {
+    color: var(--text-faint);
+  }
+</style>

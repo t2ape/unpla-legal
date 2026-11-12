@@ -1,0 +1,174 @@
+---
+import { render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getFaqs } from '../../lib/entries';
+import { DEFAULT_LOCALE, FAQ_CATEGORY_ORDER, otherLocale, UI, type Locale } from '../../i18n';
+import { localePath, PATHS } from '../../utils';
+
+// よくある質問（/faq と /en/faq）。本文は 1 問 1 ファイルで、日本語は src/content/faq/<id>.md、
+// 英語は src/content/en/faq/<id>.md（日本語と同じファイル名）に置く。
+// 各質問は id（ファイル名）をアンカーに持ち、アプリからは /faq#<id> で直接開く。
+// 分類の並び順は FAQ_CATEGORY_ORDER、見出しは UI[locale].faq.categories で決める
+// （分類に質問が 1 つも無ければ見出しごと出さない）。
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const t = UI[locale];
+
+const faqs = await getFaqs(locale);
+const sections = await Promise.all(
+  FAQ_CATEGORY_ORDER.map(async (key) => ({
+    key,
+    label: t.faq.categories[key],
+    items: await Promise.all(
+      faqs
+        .filter((e) => e.data.category === key)
+        .map(async (entry) => ({ entry, Content: (await render(entry)).Content })),
+    ),
+  })),
+).then((all) => all.filter((section) => section.items.length > 0));
+
+// もう一方の言語のページ。英語の質問が 1 件も無いあいだ /en/faq は無いので、対応なしにする。
+const other = otherLocale(locale);
+const alternatePath = (await getFaqs(other)).length > 0 ? localePath(other, PATHS.faq) : undefined;
+const supportPath = localePath(locale, PATHS.support);
+---
+
+<BaseLayout
+  locale={locale}
+  pageTitle={t.faq.title}
+  path={localePath(locale, PATHS.faq)}
+  alternatePath={alternatePath}
+>
+  <div class="container narrow">
+    <header class="page-hero">
+      <span class="eyebrow">FAQ</span>
+      <h1>{t.faq.title}</h1>
+      {
+        locale === 'en' ? (
+          <p class="lead">
+            Answers to common questions about UnplaQuest. If these do not solve your problem, please contact{' '}
+            <a href={supportPath}>Support</a>.
+          </p>
+        ) : (
+          <p class="lead">
+            アンプラクエスト（UnplaQuest）でよくいただくご質問をまとめています。解決しない場合は<a
+              href={supportPath}>サポート</a
+            >までご連絡ください。
+          </p>
+        )
+      }
+    </header>
+
+    <nav class="index" aria-label={t.faq.indexLabel}>
+      {
+        sections.map((section) => (
+          <div class="index-group">
+            <p class="index-label">{section.label}</p>
+            <ul>
+              {section.items.map(({ entry }) => (
+                <li>
+                  <a href={`#${entry.id}`}>{entry.data.question}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </nav>
+
+    {
+      sections.map((section) => (
+        <section class="category" aria-labelledby={`category-${section.key}`}>
+          <h2 id={`category-${section.key}`}>{section.label}</h2>
+          {section.items.map(({ entry, Content }) => (
+            <article class="qa" id={entry.id}>
+              <h3>
+                <span class="q-mark" aria-hidden="true">
+                  Q
+                </span>
+                {entry.data.question}
+                {entry.data.status === 'draft' && <span class="chip is-warning">{t.legal.draft}</span>}
+              </h3>
+              <div class="prose answer">
+                <Content />
+              </div>
+            </article>
+          ))}
+        </section>
+      ))
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .narrow {
+    max-width: 46rem;
+  }
+  .index {
+    display: grid;
+    gap: 1.25rem;
+    margin: 0 0 3rem;
+    padding: 1.5rem 1.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .index-label {
+    margin: 0 0 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+  }
+  .index ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .index a {
+    font-size: 0.95rem;
+  }
+  .category {
+    margin: 0 0 3rem;
+  }
+  .category h2 {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    margin: 0 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .qa {
+    /* アンカーで飛んだとき、固定ヘッダー（狭い画面ではナビ込みで 2 段）の下に見出しが来るよう余白を取る。 */
+    scroll-margin-top: 7rem;
+    padding: 1.25rem 0 0.5rem;
+  }
+  .qa h3 {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 0 0 0.75rem;
+    font-size: 1.05rem;
+    line-height: 1.6;
+  }
+  .q-mark {
+    flex-shrink: 0;
+    font-family: var(--font-display);
+    color: var(--accent);
+  }
+  .answer {
+    padding-left: 1.6rem;
+  }
+  /* アプリから /faq#<id> で開いたとき、どの質問に飛んだかが分かるよう左端に印を付ける。 */
+  .qa:target .answer {
+    border-left: 3px solid var(--accent-bright);
+    padding-left: calc(1.6rem - 3px);
+  }
+</style>
