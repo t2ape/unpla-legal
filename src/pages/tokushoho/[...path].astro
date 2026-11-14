@@ -87,8 +87,9 @@ const { Content } = await render(entry);
   @media (min-width: 760px) {
     .commerce-sheet {
       display: grid;
-      grid-template-columns: 11rem minmax(0, 1fr);
-      column-gap: 1.5rem;
+      /* 列の間をすき間にせず項目名の右の余白で取り、区切り線を左右でつなげる */
+      grid-template-columns: 12.5rem minmax(0, 1fr);
+      column-gap: 0;
       padding: 0.5rem 2rem 1.25rem;
     }
     .commerce-sheet > p:first-child {
@@ -96,7 +97,9 @@ const { Content } = await render(entry);
     }
     .commerce-sheet > h2 {
       grid-column: 1;
-      padding: 1.2rem 0;
+      /* 1 行目の高さを内容の行（0.95rem × 1.9）とそろえ、項目名と内容の 1 行目を同じ高さに置く */
+      line-height: calc(0.95rem * 1.9);
+      padding: 1.2rem 1.5rem 0.6rem 0;
     }
     .commerce-sheet > :not(h2):not(:first-child) {
       grid-column: 2;
@@ -106,6 +109,10 @@ const { Content } = await render(entry);
     .commerce-sheet > h2 + * {
       border-top: 1px solid var(--border);
       padding-top: 1.2rem;
+    }
+    /* 内容が箇条書きのとき、1 項目めの上の余白で項目名より下がらないようにする */
+    .commerce-sheet > ul > li:first-child {
+      margin-top: 0;
     }
   }
 </style>
